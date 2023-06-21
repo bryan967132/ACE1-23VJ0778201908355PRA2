@@ -6,7 +6,7 @@
 .DATA
 ;; VARIABLES | MEMORIA RAM
 ;; tamaño byte (db)
-universidad db "Universidad de San Carlos de Guatemala", 0a, "$"
+universidad	db "Universidad de San Carlos de Guatemala", 0a, "$"
 facultad  	db "Facultad de Ingenier", 0a1, "a", 0a, "$"
 escuela 	db "Escuela de Vacaciones", 0a, "$"
 curso  		db "Arquitectura de Computadoras y Ensambladores 1", 0a, 0a, "$"
