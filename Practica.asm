@@ -12,9 +12,9 @@
 	middleR                 db				0b9, "$"
 	lineL                   db				30 dup (0cd), "$"
 	; PROMPT
-	prompt					db				"Seleccione una Opcion", "$"
+	prompt                  db				"Seleccione una Opcion", "$"
 	; FINALIZADO
-	finalizado				db				0ad, "Finalizado!", "$"
+	finalizado              db				0ad, "Finalizado!", "$"
 	; DATOS DE ENCABEZADO
 	universidad             db				0ba, " Universidad de San Carlos de Guatemala         ", 0ba, "$"
 	facultad                db				0ba, " Facultad de Ingenieria                         ", 0ba, "$"
@@ -23,49 +23,49 @@
 	nombre                  db				0ba, " Nombre: Danny Hugo Bryan Tejaxun Pichiya       ", 0ba, "$"
 	carnet                  db				0ba, " Carne: 201908355                               ", 0ba, "$"
 	; OPCIONES MENÚ PRINCIPAL
-	tituloMenuP				db				0ba, "                 Menu Principal                 ", 0ba, "$"
-	tituloProductos			db				0ba, " 1. Productos                                   ", 0ba, "$"
-	tituloVentas			db				0ba, " 2. Ventas                                      ", 0ba, "$"
-	tituloHerramientas		db				0ba, " 3. Herramientas                                ", 0ba, "$"
-	tituloSalir				db				0ba, " 4. Salir                                       ", 0ba, "$"
+	tituloMenuP             db				0ba, "                 Menu Principal                 ", 0ba, "$"
+	tituloProductos         db				0ba, " 1. Productos                                   ", 0ba, "$"
+	tituloVentas            db				0ba, " 2. Ventas                                      ", 0ba, "$"
+	tituloHerramientas      db				0ba, " 3. Herramientas                                ", 0ba, "$"
+	tituloSalir             db				0ba, " 4. Salir                                       ", 0ba, "$"
 	; OPCIONES MENÚ PRODUCTOS
-	tituloMenuProductos		db				0ba, "                 Menu Productos                 ", 0ba, "$"
-	tituloIngresoP			db				0ba, " 1. Ingresar Producto                           ", 0ba, "$"
-	tituloVerP				db				0ba, " 2. Ver Productos                               ", 0ba, "$"
-	tituloEliminarP			db				0ba, " 3. Eliminar Producto                           ", 0ba, "$"
-	tituloVolverP			db				0ba, " 4. Volver                                      ", 0ba, "$"
+	tituloMenuProductos     db				0ba, "                 Menu Productos                 ", 0ba, "$"
+	tituloIngresoP          db				0ba, " 1. Ingresar Producto                           ", 0ba, "$"
+	tituloVerP              db				0ba, " 2. Ver Productos                               ", 0ba, "$"
+	tituloEliminarP         db				0ba, " 3. Eliminar Producto                           ", 0ba, "$"
+	tituloVolverP           db				0ba, " 4. Volver                                      ", 0ba, "$"
 	; OPCIONES MENÚ VENTAS
-	tituloMenuVentas		db				0ba, "                  Menu Ventas                   ", 0ba, "$"
-	tituloRealizarV			db				0ba, " 1. Realizar Venta                              ", 0ba, "$"
-	tituloVolverV			db				0ba, " 2. Volver                                      ", 0ba, "$"
+	tituloMenuVentas        db				0ba, "                  Menu Ventas                   ", 0ba, "$"
+	tituloRealizarV         db				0ba, " 1. Realizar Venta                              ", 0ba, "$"
+	tituloVolverV           db				0ba, " 2. Volver                                      ", 0ba, "$"
 	; OPCIONES MENÚ HERRAMIENTAS
-	tituloMenuHerramientas	db				0ba, "               Menu Herramientas                ", 0ba, "$"
-	tituloCatalogoH			db				0ba, " 1. Generar Catalogo De Productos               ", 0ba, "$"
-	tituloRepoAlfaH			db				0ba, " 2. Reporte Alfabetico De Productos             ", 0ba, "$"
-	tituloRepoVenH			db				0ba, " 3. Reporte De Ventas                           ", 0ba, "$"
-	tituloRepoAgotH			db				0ba, " 4. Reporte De Productos Agotados               ", 0ba, "$"
-	tituloVolverH			db				0ba, " 5. Volver                                      ", 0ba, "$"
+	tituloMenuHerramientasdb				0ba, "               Menu Herramientas                ", 0ba, "$"
+	tituloCatalogoH         db				0ba, " 1. Generar Catalogo De Productos               ", 0ba, "$"
+	tituloRepoAlfaH         db				0ba, " 2. Reporte Alfabetico De Productos             ", 0ba, "$"
+	tituloRepoVenH          db				0ba, " 3. Reporte De Ventas                           ", 0ba, "$"
+	tituloRepoAgotH         db				0ba, " 4. Reporte De Productos Agotados               ", 0ba, "$"
+	tituloVolverH           db				0ba, " 5. Volver                                      ", 0ba, "$"
 	; ARCHIVOS
-	f_productos				db				"PROD.BIN", 00
-	f_ventas				db				"VENT.BIN", 00
-	f_repcatalogo			db				"CATALG.HTM", 00
-	f_repalfabetico			db				"ABC.HTM", 00
-	f_repventas				db				"REP.TXT", 00
-	f_repfalta				db				"FALTA.HTM", 00
+	f_productos             db				"PROD.BIN", 00
+	f_ventas                db				"VENT.BIN", 00
+	f_repcatalogo           db				"CATALG.HTM", 00
+	f_repalfabetico         db				"ABC.HTM", 00
+	f_repventas             db				"REP.TXT", 00
+	f_repfalta              db				"FALTA.HTM", 00
 	; HANDLES
-	h_productos				dw				0000
-	h_ventas				dw				0000
-	h_repcatalogo			dw				0000
-	h_repalfabetico			dw				0000
-	h_repventas				dw				0000
-	h_repfalta				dw				0000
+	h_productos             dw				0000
+	h_ventas                dw				0000
+	h_repcatalogo           dw				0000
+	h_repalfabetico         dw				0000
+	h_repventas             dw				0000
+	h_repfalta              dw				0000
 	; ESTRUCTURA PRODUCTO
-	p_codigo				db				05 dup (0)
-	p_nombre				db				05 dup (0)
-	p_precio				db				05 dup (0)
-	p_unidades				db				05 dup (0)
-	n_price					dw				0000
-	n_units					dw				0000
+	p_codigo                db				05 dup (0)
+	p_nombre                db				05 dup (0)
+	p_precio                db				05 dup (0)
+	p_unidades              db				05 dup (0)
+	n_price                 dw				0000
+	n_units                 dw				0000
 .CODE
 .STARTUP
 main:
