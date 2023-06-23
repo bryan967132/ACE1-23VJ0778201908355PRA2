@@ -71,8 +71,8 @@
 	; ESTRUCTURA PRODUCTO
 	p_codigo                db				04 dup (0)
 	p_descripcion           db				20 dup (0)
-	p_unidades              db				02 dup (0)
 	p_precio                db				02 dup (0)
+	p_unidades              db				02 dup (0)
 	n_precio                dw				0000
 	n_unidades              dw				0000
 .CODE
@@ -260,6 +260,37 @@ main:
 		int 21
 	endm
 
+	parseNum macro numero, cadena
+		local convertir, terminate
+			mov DI, offset cadena
+			mov AX, 0000              ; INICIALIZAR LA SALIDA
+			mov CX, 0005
+		convertir:
+			mov BL, [DI]
+			cmp BL, 00
+			je terminate
+			sub BL, 30                ; BL VALOR NUMÉRICO DEL CARACTER
+			mov DX, 000a              ; DX VALOR 10 (000A)
+			mul DX                    ; AX * DX : SIEMPRE MUL MULTIPLICA EL OPERANDO POR AX
+			mov BH, 00
+			add AX, BX                ; AX += BX
+			inc DI                    ; AVANZA PUNTERO EN LA CADENA
+			loop convertir
+		terminate:
+			mov [numero], AX
+	endm
+
+	memset macro campo
+		local ciclo
+			mov DI, offset campo
+			mov CX, 0005
+		ciclo:
+			mov AL, 00
+			mov [DI], AL
+			inc DI
+			loop ciclo
+	endm
+
 	; PROGRAMA
 	encabezado:
 		imprimirEncabezado
@@ -289,6 +320,7 @@ main:
 		cmp AL, 34 ; OPCION 4: VOLVER
 		je menuPrincipal
 		jmp menuProductos
+		; ****************************INGRESO DE PRODUCTO****************************
 		ingresoProductos:
 			println tituloInsertar
 			; ------------------------CODIGO PRODUCTO-----------------------------
@@ -332,6 +364,8 @@ main:
 				jmp precioProd
 			aceptaPreProd:
 				aceptarCampoYGuardar p_precio, buffer_entrada
+				parseNum n_precio, p_precio
+				memset p_precio
 			; ------------------------UNIDADES PRODUCTO---------------------------
 			print line
 			unidadesProd:
@@ -346,6 +380,8 @@ main:
 				jmp unidadesProd
 			aceptaUniProd:
 				aceptarCampoYGuardar p_unidades, buffer_entrada
+				parseNum n_unidades, p_unidades
+				memset p_unidades
 			; ----------------------MANEJO ARCHIVO PRODUCTO-----------------------
 			abrirArchivo f_productos     ; ABRIR ARCHIVO SI EXISTE, SI NO EXISTE LO CREA Y ABRE
 			escribirAlFinalArchivo h_productos, p_codigo
