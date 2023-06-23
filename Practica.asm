@@ -17,7 +17,7 @@
 	finalizado              db				0ad, "Finalizado!", "$"
 	; BUFFER
 	buffer_entrada          db				21, 00
-							db				21 dup (0)
+                            db				21 dup (0)
 	; DATOS DE ENCABEZADO
 	universidad             db				0ba, " Universidad de San Carlos de Guatemala         ", 0ba, "$"
 	facultad                db				0ba, " Facultad de Ingenieria                         ", 0ba, "$"
@@ -69,12 +69,12 @@
 	h_repventas             dw				0000
 	h_repfalta              dw				0000
 	; ESTRUCTURA PRODUCTO
-	p_codigo                db				05 dup (0)
-	p_descripcion           db				05 dup (0)
-	p_precio                db				05 dup (0)
-	p_unidades              db				05 dup (0)
-	n_price                 dw				0000
-	n_units                 dw				0000
+	p_codigo                db				04 dup (0)
+	p_descripcion           db				20 dup (0)
+	p_unidades              db				02 dup (0)
+	p_precio                db				02 dup (0)
+	n_precio                dw				0000
+	n_unidades              dw				0000
 .CODE
 .STARTUP
 main:
@@ -201,6 +201,65 @@ main:
 		mov AL, [DI]
 	endm
 
+	; --- ACEPTAR CAMPO Y GUARDAR EN ESTRUCTURA
+	aceptarCampoYGuardar macro campo, buffer
+		local aceptarCampo, copiarCampoAEstructura
+		aceptarCampo:
+			mov SI, offset campo
+			mov DI, offset buffer
+			inc DI
+			mov CH, 00
+			mov CL, [DI]
+			inc DI                   ; CONTENIDO EN EL BUFFER
+		copiarCampoAEstructura:
+			mov AL, [DI]
+			mov [SI], AL
+			inc SI
+			inc DI
+			loop copiarCampoAEstructura
+	endm
+
+	abrirArchivo macro archivo
+		local crearArchivo, terminate
+			; INTENTAR ABRIR EL ARCHIVO NORMALMENTE
+			mov AL, 02
+			mov AH, 3d
+			mov DX, offset archivo
+			int 21
+			; SI NO EXISTE LO CREAMOS
+			jc crearArchivo
+			; SI EXISTE SALIMOS
+			jmp terminate
+		crearArchivo:
+			mov CX, 0000
+			mov DX, offset archivo
+			mov AH, 3c
+			int 21
+			; ARCHIVO ABIERTO
+		terminate:
+	endm
+
+	escribirAlFinalArchivo macro handle, campo
+		mov [handle], AX            ; GUARDAR HANDLE
+		mov BX, [handle]            ; OBTENER HANDLE
+		; IR AL FINAL DEL ARCHIVO
+		mov CX, 00
+		mov DX, 00
+		mov AL, 02
+		mov AH, 42
+		int 21
+		; ESCRIBIR EN EL ARCHIVO
+		mov CX, 28
+		mov DX, offset campo
+		mov AH, 40
+		int 21
+	endm
+
+	cerrarArchivo macro
+		mov AH, 3e
+		int 21
+	endm
+
 	; PROGRAMA
 	encabezado:
 		imprimirEncabezado
@@ -230,60 +289,68 @@ main:
 		cmp AL, 34 ; OPCION 4: VOLVER
 		je menuPrincipal
 		jmp menuProductos
-
 		ingresoProductos:
 			println tituloInsertar
-			; CODIGO PRODUCTO
+			; ------------------------CODIGO PRODUCTO-----------------------------
 			codigoProd:
 				print tituloInsCod
 				leerEntrada buffer_entrada
 				lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
 				cmp AL, 00               ; COMPARA AL Y 00H
-				je codigoProd            ; SALTA SI AL > 00H
+				je codigoProd            ; SALTA SI AL = 00H
 				cmp AL, 05               ; COMPARA AL Y 05H
-				jb aceptaCodProd      ; SALTA SI AL < 05H
+				jb aceptaCodProd         ; SALTA SI AL < 05H
+				print line
 				jmp codigoProd
 			aceptaCodProd:
-
-			; DESCRIPCIÓN PRODUCTO
+				aceptarCampoYGuardar p_codigo, buffer_entrada
+			; ------------------------DESCRIPCIÓN PRODUCTO------------------------
 			print line
 			descripcionProd:
 				print tituloInsDes
 				leerEntrada buffer_entrada
 				lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
 				cmp AL, 00               ; COMPARA AL Y 00H
-				je descripcionProd       ; SALTA SI AL > 00H
+				je descripcionProd       ; SALTA SI AL = 00H
 				cmp AL, 21               ; COMPARA AL Y 21H
 				jb aceptaDesProd         ; SALTA SI AL < 21H
+				print line
 				jmp descripcionProd
 			aceptaDesProd:
-
-			; PRECIO PRODUCTO
+				aceptarCampoYGuardar p_descripcion, buffer_entrada
+			; ------------------------PRECIO PRODUCTO-----------------------------
 			print line
 			precioProd:
 				print tituloInsPre
 				leerEntrada buffer_entrada
 				lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
 				cmp AL, 00               ; COMPARA AL Y 00H
-				je precioProd            ; SALTA SI AL > 00H
-				cmp AL, 05               ; COMPARA AL Y 05H
-				jb aceptaPreProd         ; SALTA SI AL < 05H
+				je precioProd            ; SALTA SI AL = 00H
+				cmp AL, 03               ; COMPARA AL Y 03H
+				jb aceptaPreProd         ; SALTA SI AL < 03H
+				print line
 				jmp precioProd
 			aceptaPreProd:
-
-			; UNIDADES PRODUCTO
+				aceptarCampoYGuardar p_precio, buffer_entrada
+			; ------------------------UNIDADES PRODUCTO---------------------------
 			print line
 			unidadesProd:
 				print tituloInsUni
 				leerEntrada buffer_entrada
 				lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
 				cmp AL, 00               ; COMPARA AL Y 00H
-				je unidadesProd          ; SALTA SI AL > 00H
-				cmp AL, 05               ; COMPARA AL Y 05H
-				jb aceptaUniProd         ; SALTA SI AL < 05H
+				je unidadesProd          ; SALTA SI AL = 00H
+				cmp AL, 03               ; COMPARA AL Y 03H
+				jb aceptaUniProd         ; SALTA SI AL < 03H
+				print line
 				jmp unidadesProd
 			aceptaUniProd:
-
+				aceptarCampoYGuardar p_unidades, buffer_entrada
+			; ----------------------MANEJO ARCHIVO PRODUCTO-----------------------
+			abrirArchivo f_productos     ; ABRIR ARCHIVO SI EXISTE, SI NO EXISTE LO CREA Y ABRE
+			escribirAlFinalArchivo h_productos, p_codigo
+			cerrarArchivo
+			; ------------------------FIN INGRESO PRODUCTO------------------------
 			print line
 			jmp menuProductos            ; VUELVE A MENÚ PRODUCTOS
 
@@ -300,10 +367,10 @@ main:
 	menuHerramientas:
 		imprimirMenuHerramientas
 		leerCaracter
-		cmp AL, 31 ; OPCION 1: INGRESAR PRODUCTO
-		cmp AL, 32 ; OPCION 2: VER PRODUCTOS
-		cmp AL, 33 ; OPCION 3: ELIMINAR PRmenuHerramientasODUCTO
-		cmp AL, 34 ; OPCION 4: VOLVER
+		cmp AL, 31 ; OPCION 1: GENERAR CATÁLOGO    HTM
+		cmp AL, 32 ; OPCION 2: REPORTE ALFABÉTICO  HTM
+		cmp AL, 33 ; OPCION 3: REPORTE DE VENTAS   TXT
+		cmp AL, 34 ; OPCION 4: REPORTE DE AGOTADOS HTM
 		cmp AL, 35 ; OPCION 5: VOLVER
 		je menuPrincipal
 		jmp menuHerramientas
