@@ -12,9 +12,12 @@
 	middleR                 db				0b9, "$"
 	lineL                   db				30 dup (0cd), "$"
 	; PROMPT
-	prompt                  db				"Seleccione una Opcion", "$"
+	prompt                  db				" Seleccione una Opcion", "$"
 	; FINALIZADO
 	finalizado              db				0ad, "Finalizado!", "$"
+	; BUFFER
+	buffer_entrada          db				21, 00
+							db				21 dup (0)
 	; DATOS DE ENCABEZADO
 	universidad             db				0ba, " Universidad de San Carlos de Guatemala         ", 0ba, "$"
 	facultad                db				0ba, " Facultad de Ingenieria                         ", 0ba, "$"
@@ -39,12 +42,18 @@
 	tituloRealizarV         db				0ba, " 1. Realizar Venta                              ", 0ba, "$"
 	tituloVolverV           db				0ba, " 2. Volver                                      ", 0ba, "$"
 	; OPCIONES MENÚ HERRAMIENTAS
-	tituloMenuHerramientasdb				0ba, "               Menu Herramientas                ", 0ba, "$"
+	tituloMenuHerramientas  db				0ba, "               Menu Herramientas                ", 0ba, "$"
 	tituloCatalogoH         db				0ba, " 1. Generar Catalogo De Productos               ", 0ba, "$"
 	tituloRepoAlfaH         db				0ba, " 2. Reporte Alfabetico De Productos             ", 0ba, "$"
 	tituloRepoVenH          db				0ba, " 3. Reporte De Ventas                           ", 0ba, "$"
 	tituloRepoAgotH         db				0ba, " 4. Reporte De Productos Agotados               ", 0ba, "$"
 	tituloVolverH           db				0ba, " 5. Volver                                      ", 0ba, "$"
+	; DATOS DE PRODUCTO
+	tituloInsertar          db				" Insertar Producto", "$"
+	tituloInsCod            db				" Codigo: ", "$"
+	tituloInsDes            db				" Descripcion: ", "$"
+	tituloInsPre            db				" Precio: ", "$"
+	tituloInsUni            db				" Unidades: ", "$"
 	; ARCHIVOS
 	f_productos             db				"PROD.BIN", 00
 	f_ventas                db				"VENT.BIN", 00
@@ -61,7 +70,7 @@
 	h_repfalta              dw				0000
 	; ESTRUCTURA PRODUCTO
 	p_codigo                db				05 dup (0)
-	p_nombre                db				05 dup (0)
+	p_descripcion           db				05 dup (0)
 	p_precio                db				05 dup (0)
 	p_unidades              db				05 dup (0)
 	n_price                 dw				0000
@@ -172,9 +181,24 @@ main:
 		print line
 	endm
 
+	; --- LEER CARACTER
 	leerCaracter macro
 		mov AH, 08
 		int 21
+	endm
+
+	; --- LEER ENTRADA POR TECLADO
+	leerEntrada macro buffer
+		mov DX, offset buffer
+		mov AH, 0a
+		int 21
+	endm
+
+	; --- LONGITUD CADENA
+	lenCadena macro buffer
+		mov DI, offset buffer
+		inc DI
+		mov AL, [DI]
 	endm
 
 	; PROGRAMA
@@ -200,11 +224,68 @@ main:
 		imprimirMenuProductos
 		leerCaracter
 		cmp AL, 31 ; OPCION 1: INGRESAR PRODUCTO
+		je ingresoProductos
 		cmp AL, 32 ; OPCION 2: VER PRODUCTOS
 		cmp AL, 33 ; OPCION 3: ELIMINAR PRODUCTO
 		cmp AL, 34 ; OPCION 4: VOLVER
 		je menuPrincipal
 		jmp menuProductos
+
+		ingresoProductos:
+			println tituloInsertar
+			; CODIGO PRODUCTO
+			codigoProd:
+				print tituloInsCod
+				leerEntrada buffer_entrada
+				lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
+				cmp AL, 00               ; COMPARA AL Y 00H
+				je codigoProd            ; SALTA SI AL > 00H
+				cmp AL, 05               ; COMPARA AL Y 05H
+				jb aceptaCodProd      ; SALTA SI AL < 05H
+				jmp codigoProd
+			aceptaCodProd:
+
+			; DESCRIPCIÓN PRODUCTO
+			print line
+			descripcionProd:
+				print tituloInsDes
+				leerEntrada buffer_entrada
+				lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
+				cmp AL, 00               ; COMPARA AL Y 00H
+				je descripcionProd       ; SALTA SI AL > 00H
+				cmp AL, 21               ; COMPARA AL Y 21H
+				jb aceptaDesProd         ; SALTA SI AL < 21H
+				jmp descripcionProd
+			aceptaDesProd:
+
+			; PRECIO PRODUCTO
+			print line
+			precioProd:
+				print tituloInsPre
+				leerEntrada buffer_entrada
+				lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
+				cmp AL, 00               ; COMPARA AL Y 00H
+				je precioProd            ; SALTA SI AL > 00H
+				cmp AL, 05               ; COMPARA AL Y 05H
+				jb aceptaPreProd         ; SALTA SI AL < 05H
+				jmp precioProd
+			aceptaPreProd:
+
+			; UNIDADES PRODUCTO
+			print line
+			unidadesProd:
+				print tituloInsUni
+				leerEntrada buffer_entrada
+				lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
+				cmp AL, 00               ; COMPARA AL Y 00H
+				je unidadesProd          ; SALTA SI AL > 00H
+				cmp AL, 05               ; COMPARA AL Y 05H
+				jb aceptaUniProd         ; SALTA SI AL < 05H
+				jmp unidadesProd
+			aceptaUniProd:
+
+			print line
+			jmp menuProductos            ; VUELVE A MENÚ PRODUCTOS
 
 	; --- MENÚ VENTAS
 	menuVentas:
