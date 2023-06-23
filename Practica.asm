@@ -3,6 +3,7 @@
 .STACK
 .DATA
 	; LÍNEAS
+	guion                   db				" - ", "$"
 	line                    db				0a, "$"
 	cornUL                  db				0c9, "$"
 	cornDL                  db				0c8, "$"
@@ -69,12 +70,13 @@
 	h_repventas             dw				0000
 	h_repfalta              dw				0000
 	; ESTRUCTURA PRODUCTO
-	p_codigo                db				04 dup (0)
-	p_descripcion           db				20 dup (0)
-	p_precio                db				02 dup (0)
-	p_unidades              db				02 dup (0)
+	p_codigo                db				05 dup (0)
+	p_descripcion           db				21 dup (0)
+	p_precio                db				03 dup (0)
+	p_unidades              db				03 dup (0)
 	n_precio                dw				0000
 	n_unidades              dw				0000
+	c_numero                db				03 dup (30)
 .CODE
 .STARTUP
 main:
@@ -249,7 +251,7 @@ main:
 		mov AH, 42
 		int 21
 		; ESCRIBIR EN EL ARCHIVO
-		mov CX, 28
+		mov CX, 02c
 		mov DX, offset campo
 		mov AH, 40
 		int 21
@@ -280,15 +282,79 @@ main:
 			mov [numero], AX
 	endm
 
-	memset macro campo
-		local ciclo
+	parseCad macro
+		local numAcadena, ciclo_poner30s, ciclo_convertirAcadena, aumentar_siguiente_digito_primera_vez, aumentar_siguiente_digito, retorno_convertirAcadena
+		numAcadena:
+				mov CX, AX ;; INICIALIZAR CONTADOR
+				mov DI, offset c_numero
+		ciclo_poner30s:
+				mov BL, 30 
+				mov [DI], BL
+				inc DI
+				loop ciclo_poner30s
+				;; TENEMOS '0' EN TODA LA CADENA
+				mov CX, AX ;; INICIALIZAR CONTADOR
+				mov DI, offset c_numero
+				add DI, 0003
+				;;
+		ciclo_convertirAcadena:
+				mov BL, [DI]
+				inc BL
+				mov [DI], BL
+				cmp BL, 3a
+				je aumentar_siguiente_digito_primera_vez
+				loop ciclo_convertirAcadena
+				jmp retorno_convertirAcadena
+		aumentar_siguiente_digito_primera_vez:
+				push DI
+		aumentar_siguiente_digito:
+				mov BL, 30 ;; PONER EN '0' EL ACTUAL
+				mov [DI], BL
+				dec DI
+				mov BL, [DI]
+				inc BL
+				mov [DI], BL
+				cmp BL, 3a
+				je aumentar_siguiente_digito
+				pop DI
+				loop ciclo_convertirAcadena
+		retorno_convertirAcadena:
+	endm
+
+	obtenerCampo macro campo
+		local ciclo_poner_dolar_1, poner_dolar_1
 			mov DI, offset campo
-			mov CX, 0005
+		ciclo_poner_dolar_1:
+			mov AL, [DI]
+			cmp AL, 00
+			je poner_dolar_1
+			inc DI
+			jmp ciclo_poner_dolar_1
+		poner_dolar_1:
+			mov AL, 24 ;; DÓLAR
+			mov [DI], AL
+	endm
+
+	imprimirProducto macro codigo, descripcion
+		obtenerCampo codigo
+		print codigo
+		print guion
+		obtenerCampo descripcion
+		println descripcion
+	endm
+
+	memset macro campo
+		local ciclo, terminate
+			mov DI, offset campo
+			mov CX, 21
 		ciclo:
 			mov AL, 00
 			mov [DI], AL
+			cmp DI, 00
+			je terminate
 			inc DI
 			loop ciclo
+		terminate:
 	endm
 
 	; PROGRAMA
@@ -314,14 +380,15 @@ main:
 		imprimirMenuProductos
 		leerCaracter
 		cmp AL, 31 ; OPCION 1: INGRESAR PRODUCTO
-		je ingresoProductos
+		je ingresoProducto
 		cmp AL, 32 ; OPCION 2: VER PRODUCTOS
+		je verProductos
 		cmp AL, 33 ; OPCION 3: ELIMINAR PRODUCTO
 		cmp AL, 34 ; OPCION 4: VOLVER
 		je menuPrincipal
 		jmp menuProductos
 		; ****************************INGRESO DE PRODUCTO****************************
-		ingresoProductos:
+		ingresoProducto:
 			println tituloInsertar
 			; ------------------------CODIGO PRODUCTO-----------------------------
 			codigoProd:
@@ -364,8 +431,7 @@ main:
 				jmp precioProd
 			aceptaPreProd:
 				aceptarCampoYGuardar p_precio, buffer_entrada
-				parseNum n_precio, p_precio
-				memset p_precio
+				; parseNum n_precio, p_precio
 			; ------------------------UNIDADES PRODUCTO---------------------------
 			print line
 			unidadesProd:
@@ -380,15 +446,41 @@ main:
 				jmp unidadesProd
 			aceptaUniProd:
 				aceptarCampoYGuardar p_unidades, buffer_entrada
-				parseNum n_unidades, p_unidades
-				memset p_unidades
+				; parseNum n_unidades, p_unidades
 			; ----------------------MANEJO ARCHIVO PRODUCTO-----------------------
 			abrirArchivo f_productos     ; ABRIR ARCHIVO SI EXISTE, SI NO EXISTE LO CREA Y ABRE
 			escribirAlFinalArchivo h_productos, p_codigo
 			cerrarArchivo
+			memset p_codigo
+			memset p_descripcion
+			memset p_precio
+			memset p_unidades
 			; ------------------------FIN INGRESO PRODUCTO------------------------
 			print line
-			jmp menuProductos            ; VUELVE A MENÚ PRODUCTOS
+			jmp menuProductos
+		; *******************************VER PRODUCTO********************************
+		verProductos:
+			abrirArchivo f_productos
+			mov [h_productos], AX
+			; RECORRER EL ARCHIVO (LEER)
+			cicloVer:
+				mov BX, [h_productos]
+				mov CX, 02c
+				mov DX, offset p_codigo
+				;
+				mov AH, 3f
+				int 21
+				;
+				cmp AX, 00                 ; COMPARA CANTIDAD DE BYTES LEIDOS
+				je finVer                  ; SALTA SI LA CANTIDAD DE BYTES LEIDOS = 0
+				; ESCRIBIR PRODUCTO EN ESTRUCTURAS E IMPRIMIRLO
+				imprimirProducto p_codigo, p_descripcion
+				memset p_codigo
+				memset p_descripcion
+				jmp cicloVer
+			finVer:
+				cerrarArchivo
+				jmp menuProductos
 
 	; --- MENÚ VENTAS
 	menuVentas:
