@@ -282,55 +282,55 @@ main:
 			mov [numero], AX
 	endm
 
-	parseCad macro
-		local numAcadena, ciclo_poner30s, ciclo_convertirAcadena, aumentar_siguiente_digito_primera_vez, aumentar_siguiente_digito, retorno_convertirAcadena
-		numAcadena:
-				mov CX, AX ;; INICIALIZAR CONTADOR
-				mov DI, offset c_numero
-		ciclo_poner30s:
-				mov BL, 30 
-				mov [DI], BL
-				inc DI
-				loop ciclo_poner30s
-				;; TENEMOS '0' EN TODA LA CADENA
-				mov CX, AX ;; INICIALIZAR CONTADOR
-				mov DI, offset c_numero
-				add DI, 0003
-				;;
-		ciclo_convertirAcadena:
-				mov BL, [DI]
-				inc BL
-				mov [DI], BL
-				cmp BL, 3a
-				je aumentar_siguiente_digito_primera_vez
-				loop ciclo_convertirAcadena
-				jmp retorno_convertirAcadena
-		aumentar_siguiente_digito_primera_vez:
-				push DI
-		aumentar_siguiente_digito:
-				mov BL, 30 ;; PONER EN '0' EL ACTUAL
-				mov [DI], BL
-				dec DI
-				mov BL, [DI]
-				inc BL
-				mov [DI], BL
-				cmp BL, 3a
-				je aumentar_siguiente_digito
-				pop DI
-				loop ciclo_convertirAcadena
-		retorno_convertirAcadena:
+	parseCad macro numero, cadena
+		local ciclo, cicloConvertir, aumentos, aumentarSiguiente, terminate
+			mov AX, [numero]
+			mov CX, AX ;; INICIALIZAR CONTADOR
+			mov DI, offset cadena
+		ciclo:
+			mov BL, 30 
+			mov [DI], BL
+			inc DI
+			loop ciclo
+			;; TENEMOS '0' EN TODA LA CADENA
+			mov CX, AX ;; INICIALIZAR CONTADOR
+			mov DI, offset cadena
+			add DI, 0003
+			;;
+		cicloConvertir:
+			mov BL, [DI]
+			inc BL
+			mov [DI], BL
+			cmp BL, 3a
+			je aumentos
+			loop cicloConvertir
+			jmp terminate
+		aumentos:
+			push DI
+		aumentarSiguiente:
+			mov BL, 30 ;; PONER EN '0' EL ACTUAL
+			mov [DI], BL
+			dec DI
+			mov BL, [DI]
+			inc BL
+			mov [DI], BL
+			cmp BL, 3a
+			je aumentarSiguiente
+			pop DI
+			loop cicloConvertir
+		terminate:
 	endm
 
 	obtenerCampo macro campo
-		local ciclo_poner_dolar_1, poner_dolar_1
+		local ciclo, ponerDolar
 			mov DI, offset campo
-		ciclo_poner_dolar_1:
+		ciclo:
 			mov AL, [DI]
 			cmp AL, 00
-			je poner_dolar_1
+			je ponerDolar
 			inc DI
-			jmp ciclo_poner_dolar_1
-		poner_dolar_1:
+			jmp ciclo
+		ponerDolar:
 			mov AL, 24 ;; DÓLAR
 			mov [DI], AL
 	endm
