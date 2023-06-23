@@ -2,6 +2,8 @@
 .RADIX 16
 .STACK
 .DATA
+	; CADENAS DE PRUEBA
+	prueba                  db              "LLEGA AQUÍ", "$"
 	; LÍNEAS
 	guion                   db				" - ", "$"
 	line                    db				0a, "$"
@@ -357,6 +359,49 @@ main:
 		terminate:
 	endm
 
+	igualesCad macro cadena1, cadena2, tam
+		local ciclo
+			mov SI, offset cadena1
+			mov DI, offset cadena2
+			mov CX, tam
+		ciclo:
+			mov AL, [SI]
+			cmp [DI], AL
+			jne no_son_iguales
+			inc DI
+			inc SI
+			loop ciclo
+			mov DL, 0ff
+			ret
+		no_son_iguales:
+			mov DL, 00
+			ret
+	endm
+
+	verificarCodP macro
+		local cicloVer, finVer
+		abrirArchivo f_productos
+			mov [h_productos], AX
+		; RECORRER EL ARCHIVO (LEER)
+		cicloVer:
+			mov BX, [h_productos]
+			mov CX, 02c
+			mov DX, offset p_codigo
+			;
+			mov AH, 3f
+			int 21
+			;
+			cmp AX, 00                 ; COMPARA CANTIDAD DE BYTES LEIDOS
+			je finVer                  ; SALTA SI LA CANTIDAD DE BYTES LEIDOS = 0
+			; ESCRIBIR PRODUCTO EN ESTRUCTURAS E IMPRIMIRLO
+			obtenerCampo p_codigo
+			println p_codigo
+			memset p_codigo
+			jmp cicloVer
+		finVer:
+			cerrarArchivo
+	endm
+
 	; PROGRAMA
 	encabezado:
 		imprimirEncabezado
@@ -390,7 +435,7 @@ main:
 		; ****************************INGRESO DE PRODUCTO****************************
 		ingresoProducto:
 			println tituloInsertar
-			; ------------------------CODIGO PRODUCTO-----------------------------
+			; --------------------------CODIGO PRODUCTO---------------------------
 			codigoProd:
 				print tituloInsCod
 				leerEntrada buffer_entrada
@@ -417,7 +462,7 @@ main:
 				jmp descripcionProd
 			aceptaDesProd:
 				aceptarCampoYGuardar p_descripcion, buffer_entrada
-			; ------------------------PRECIO PRODUCTO-----------------------------
+			; --------------------------PRECIO PRODUCTO---------------------------
 			print line
 			precioProd:
 				print tituloInsPre
@@ -432,7 +477,7 @@ main:
 			aceptaPreProd:
 				aceptarCampoYGuardar p_precio, buffer_entrada
 				; parseNum n_precio, p_precio
-			; ------------------------UNIDADES PRODUCTO---------------------------
+			; -------------------------UNIDADES PRODUCTO--------------------------
 			print line
 			unidadesProd:
 				print tituloInsUni
@@ -463,6 +508,7 @@ main:
 			abrirArchivo f_productos
 			mov [h_productos], AX
 			; RECORRER EL ARCHIVO (LEER)
+			mov SI, 00
 			cicloVer:
 				mov BX, [h_productos]
 				mov CX, 02c
@@ -474,13 +520,30 @@ main:
 				cmp AX, 00                 ; COMPARA CANTIDAD DE BYTES LEIDOS
 				je finVer                  ; SALTA SI LA CANTIDAD DE BYTES LEIDOS = 0
 				; ESCRIBIR PRODUCTO EN ESTRUCTURAS E IMPRIMIRLO
+				inc SI
 				imprimirProducto p_codigo, p_descripcion
+				cmp SI, 05
+				je validarSeguir
 				memset p_codigo
 				memset p_descripcion
+				jmp cicloVer
+			validarSeguir:
+				leerCaracter
+				cmp AL, 0d
+				je seguirViendo
+				cmp AL, 71
+				je finVer
+				jmp validarSeguir
+			seguirViendo:
+				print line
+				mov SI, 00
 				jmp cicloVer
 			finVer:
 				cerrarArchivo
 				jmp menuProductos
+		; *****************************ELIMINAR PRODUCTO*****************************
+		eliminarProducto:
+			jmp menuProductos
 
 	; --- MENÚ VENTAS
 	menuVentas:
