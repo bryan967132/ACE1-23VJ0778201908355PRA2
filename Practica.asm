@@ -3,7 +3,7 @@
 .STACK
 .DATA
 	; CADENAS DE PRUEBA
-	prueba                  db              "LLEGA AQUÍ", "$"
+	prueba                  db              "LLEGA AQUI", "$"
 	; LÍNEAS
 	guion                   db				" - ", "$"
 	line                    db				0a, "$"
@@ -14,6 +14,15 @@
 	cornDR                  db				0bc, "$"
 	middleR                 db				0b9, "$"
 	lineL                   db				30 dup (0cd), "$"
+	; REPORTE
+	html                    db              "<html><body>", "$"
+	html_f                  db              "</body></html>", "$"
+	tabla                   db              "<table>", "$"
+	tabla_f                 db              "</table>", "$"
+	fila                    db              "<tr>", "$"
+	fila_f                  db              "</tr>", "$"
+	columna                 db              "<td>", "$"
+	columna_f               db              "</td>", "$"
 	; PROMPT
 	prompt                  db				" Seleccione una Opcion", "$"
 	; FINALIZADO
@@ -79,6 +88,8 @@
 	n_precio                dw				0000
 	n_unidades              dw				0000
 	c_numero                db				03 dup (30)
+	p_codigo_temp           db				05 dup (0)
+	puntero_temp            dw				0000
 .CODE
 .STARTUP
 main:
@@ -243,7 +254,7 @@ main:
 		terminate:
 	endm
 
-	escribirAlFinalArchivo macro handle, campo
+	escribirAlFinalArchivoProducto macro handle, campo, precio
 		mov [handle], AX            ; GUARDAR HANDLE
 		mov BX, [handle]            ; OBTENER HANDLE
 		; IR AL FINAL DEL ARCHIVO
@@ -253,8 +264,13 @@ main:
 		mov AH, 42
 		int 21
 		; ESCRIBIR EN EL ARCHIVO
-		mov CX, 02c
+		mov CX, 26
 		mov DX, offset campo
+		mov AH, 40
+		int 21
+		; ESCRIBIR EN EL ARCHIVO LOS DATOS NUMÉRICOS
+		mov CX, 04
+		mov DX, offset precio
 		mov AH, 40
 		int 21
 	endm
@@ -284,20 +300,20 @@ main:
 			mov [numero], AX
 	endm
 
-	parseCad macro numero, cadena
+	parseCad macro cadena, numero
 		local ciclo, cicloConvertir, aumentos, aumentarSiguiente, terminate
 			mov AX, [numero]
-			mov CX, AX ;; INICIALIZAR CONTADOR
+			mov CX, 0005              ; INICIALIZAR CONTADOR
 			mov DI, offset cadena
 		ciclo:
 			mov BL, 30 
 			mov [DI], BL
 			inc DI
 			loop ciclo
-			;; TENEMOS '0' EN TODA LA CADENA
-			mov CX, AX ;; INICIALIZAR CONTADOR
+			; TENEMOS '0' EN TODA LA CADENA
+			mov CX, AX                ; INICIALIZAR CONTADOR
 			mov DI, offset cadena
-			add DI, 0003
+			add DI, 0004
 			;;
 		cicloConvertir:
 			mov BL, [DI]
@@ -310,7 +326,7 @@ main:
 		aumentos:
 			push DI
 		aumentarSiguiente:
-			mov BL, 30 ;; PONER EN '0' EL ACTUAL
+			mov BL, 30                ; PONER EN '0' EL ACTUAL
 			mov [DI], BL
 			dec DI
 			mov BL, [DI]
@@ -337,6 +353,28 @@ main:
 			mov [DI], AL
 	endm
 
+	imprimirProductoT macro codigo, descripcion, precio, unidades
+		obtenerCampo codigo
+		print codigo
+		print guion
+		obtenerCampo descripcion
+		print descripcion
+		print guion
+		parseCad c_numero, precio
+		mov BX, 0001
+		mov CX, 0005
+		mov DX, offset c_numero
+		inc DX
+		inc DX
+		inc DX
+		mov AH, 40
+		int 21
+		;println p_precio
+		;print guion
+		;obtenerCampo p_unidades
+		;println p_unidades
+		print line
+	endm
 	imprimirProducto macro codigo, descripcion
 		obtenerCampo codigo
 		print codigo
@@ -345,18 +383,15 @@ main:
 		println descripcion
 	endm
 
-	memset macro campo
+	memset macro campo, longitud
 		local ciclo, terminate
 			mov DI, offset campo
-			mov CX, 21
+			mov CX, longitud
 		ciclo:
 			mov AL, 00
 			mov [DI], AL
-			cmp DI, 00
-			je terminate
 			inc DI
 			loop ciclo
-		terminate:
 	endm
 
 	igualesCad macro cadena1, cadena2, tam
@@ -376,30 +411,6 @@ main:
 		no_son_iguales:
 			mov DL, 00
 			ret
-	endm
-
-	verificarCodP macro
-		local cicloVer, finVer
-		abrirArchivo f_productos
-			mov [h_productos], AX
-		; RECORRER EL ARCHIVO (LEER)
-		cicloVer:
-			mov BX, [h_productos]
-			mov CX, 02c
-			mov DX, offset p_codigo
-			;
-			mov AH, 3f
-			int 21
-			;
-			cmp AX, 00                 ; COMPARA CANTIDAD DE BYTES LEIDOS
-			je finVer                  ; SALTA SI LA CANTIDAD DE BYTES LEIDOS = 0
-			; ESCRIBIR PRODUCTO EN ESTRUCTURAS E IMPRIMIRLO
-			obtenerCampo p_codigo
-			println p_codigo
-			memset p_codigo
-			jmp cicloVer
-		finVer:
-			cerrarArchivo
 	endm
 
 	; PROGRAMA
@@ -476,6 +487,8 @@ main:
 				jmp precioProd
 			aceptaPreProd:
 				aceptarCampoYGuardar p_precio, buffer_entrada
+				parseNum n_precio, p_precio
+				memset p_precio, 03
 				; parseNum n_precio, p_precio
 			; -------------------------UNIDADES PRODUCTO--------------------------
 			print line
@@ -491,16 +504,17 @@ main:
 				jmp unidadesProd
 			aceptaUniProd:
 				aceptarCampoYGuardar p_unidades, buffer_entrada
+				parseNum n_unidades, p_unidades
+				memset p_unidades, 03
 				; parseNum n_unidades, p_unidades
 			; ----------------------MANEJO ARCHIVO PRODUCTO-----------------------
 			abrirArchivo f_productos     ; ABRIR ARCHIVO SI EXISTE, SI NO EXISTE LO CREA Y ABRE
-			escribirAlFinalArchivo h_productos, p_codigo
+			escribirAlFinalArchivoProducto h_productos, p_codigo, n_precio
 			cerrarArchivo
-			memset p_codigo
-			memset p_descripcion
-			memset p_precio
-			memset p_unidades
+			memset p_codigo, 05
+			memset p_descripcion, 21
 			; ------------------------FIN INGRESO PRODUCTO------------------------
+			print line
 			print line
 			jmp menuProductos
 		; *******************************VER PRODUCTO********************************
@@ -511,9 +525,14 @@ main:
 			mov SI, 00
 			cicloVer:
 				mov BX, [h_productos]
-				mov CX, 02c
+				mov CX, 26
 				mov DX, offset p_codigo
+				mov AH, 3f
+				int 21
 				;
+				mov BX, [h_productos]
+				mov CX, 04
+				mov DX, offset n_precio
 				mov AH, 3f
 				int 21
 				;
@@ -524,8 +543,8 @@ main:
 				imprimirProducto p_codigo, p_descripcion
 				cmp SI, 05
 				je validarSeguir
-				memset p_codigo
-				memset p_descripcion
+				memset p_codigo, 05
+				memset p_descripcion, 21
 				jmp cicloVer
 			validarSeguir:
 				leerCaracter
@@ -539,10 +558,37 @@ main:
 				mov SI, 00
 				jmp cicloVer
 			finVer:
-				cerrarArchivo
+				print line
 				jmp menuProductos
 		; *****************************ELIMINAR PRODUCTO*****************************
 		eliminarProducto:
+			; codigoProdEl:
+			; 	print tituloInsCod
+			; 	leerEntrada buffer_entrada
+			; 	lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
+			; 	cmp AL, 00               ; COMPARA AL Y 00H
+			; 	je codigoProdEl            ; SALTA SI AL = 00H
+			; 	cmp AL, 05               ; COMPARA AL Y 05H
+			; 	jb aceptaCodProdEl         ; SALTA SI AL < 05H
+			; 	print line
+			; 	jmp codigoProdEl
+			; aceptaCodProdEl:
+			; 	aceptarCampoYGuardar p_codigo_temp, buffer_entrada
+			; 	mov DX, 0000
+			; 	mov [puntero_temp], DX
+			; buscarProductoEl:
+			; 	mov BX, [h_productos]
+			; 	mov CX, 02c
+			; 	mov DX, offset p_codigo
+			; 	mov AH, 3f
+			; 	int 21
+			; 	cmp AX, 0000
+			; 	je finalizarBusqueda     ; SI AX = 0 SALTA
+			; 	mov DX, [puntero_temp]
+			; 	add DX, 02c
+			; 	mov [puntero_temp], DX
+			; 	mov AL, 0000
+			; 	cmp [p_codigo], AL
 			jmp menuProductos
 
 	; --- MENÚ VENTAS
