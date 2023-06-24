@@ -91,6 +91,7 @@
 	p_codigo_temp           db				05 dup (0)
 	puntero_temp            dw				0000
 	p_borrado               db				02a dup (0)
+	u_byte					db				01 dup (0)
 .CODE
 .STARTUP
 main:
@@ -233,6 +234,56 @@ main:
 			inc SI
 			inc DI
 			loop copiarCampoAEstructura
+	endm
+
+	
+
+	limpiarArchivoProductos macro
+		local buscarDolar, borrarDolar, finalizarBorrar
+			mov DX, 0000
+			mov [puntero_temp], DX
+			abrirArchivo f_productos
+			mov [h_productos], AX
+		buscarDolar:
+			mov BX, [h_productos]
+			mov CX, 01
+			mov DX, offset p_codigo
+			mov AH, 3f
+			int 21
+			cmp AX, 00
+			je finalizarBorrar
+			mov DX, [puntero_temp]
+			add DX, 01
+			mov [puntero_temp], DX
+			;
+			mov AL, 0000
+			cmp [p_codigo], AL
+			je buscarDolar
+			; VALIDA QUE EL CÓDIGO INGRESADO COINCIDA CON ALGUNO GUARDADO
+			cmp byte ptr p_codigo, 24
+			je borrarDolar
+			
+			jmp buscarDolar
+		borrarDolar:
+			; POSICIONAR PUNTERO
+			mov DX, [puntero_temp]
+			sub DX, 01
+			mov CX, 00
+			mov BX, [h_productos]
+			mov AL, 00
+			mov AH, 42
+			int 21
+			; PUNTERO POSICIONADO
+			mov CX, 01
+			mov DX, offset u_byte
+			mov AH, 40
+			int 21
+			jmp buscarDolar
+		finalizarBorrar:
+			mov BX, [h_productos]
+			mov AH, 3e
+			int 21
+		jmp menuProductos
 	endm
 
 	abrirArchivo macro archivo
@@ -518,6 +569,7 @@ main:
 			; ------------------------FIN INGRESO PRODUCTO------------------------
 			print line
 			print line
+			limpiarArchivoProductos
 			jmp menuProductos
 		; *******************************VER PRODUCTO********************************
 		verProductos:
@@ -527,19 +579,16 @@ main:
 			mov SI, 00
 			cicloVer:
 				mov BX, [h_productos]
-				mov CX, 26
+				mov CX, 02a
 				mov DX, offset p_codigo
-				mov AH, 3f
-				int 21
-				;
-				mov BX, [h_productos]
-				mov CX, 04
-				mov DX, offset n_precio
 				mov AH, 3f
 				int 21
 				;
 				cmp AX, 00                 ; COMPARA CANTIDAD DE BYTES LEIDOS
 				je finVer                  ; SALTA SI LA CANTIDAD DE BYTES LEIDOS = 0
+				;
+				cmp byte ptr p_codigo, 00
+				je cicloVer
 				; ESCRIBIR PRODUCTO EN ESTRUCTURAS E IMPRIMIRLO
 				inc SI
 				imprimirProducto p_codigo, p_descripcion
@@ -561,6 +610,7 @@ main:
 				jmp cicloVer
 			finVer:
 				jmp menuProductos
+			
 		; *****************************ELIMINAR PRODUCTO*****************************
 		eliminarProducto:
 				mov DX, 0000
@@ -570,9 +620,9 @@ main:
 				leerEntrada buffer_entrada
 				lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
 				cmp AL, 00               ; COMPARA AL Y 00H
-				je codigoProdEl            ; SALTA SI AL = 00H
+				je codigoProdEl          ; SALTA SI AL = 00H
 				cmp AL, 05               ; COMPARA AL Y 05H
-				jb aceptaCodProdEl         ; SALTA SI AL < 05H
+				jb aceptaCodProdEl       ; SALTA SI AL < 05H
 				print line
 				jmp codigoProdEl
 			aceptaCodProdEl:
