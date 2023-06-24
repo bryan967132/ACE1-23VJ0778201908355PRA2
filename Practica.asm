@@ -3,7 +3,7 @@
 .STACK
 .DATA
 	; CADENAS DE PRUEBA
-	prueba                  db              "LLEGA AQUI", "$"
+	prueba                  db				"LLEGA AQUI", "$"
 	; LÍNEAS
 	guion                   db				" - ", "$"
 	line                    db				0a, "$"
@@ -15,14 +15,14 @@
 	middleR                 db				0b9, "$"
 	lineL                   db				30 dup (0cd), "$"
 	; REPORTE
-	html                    db              "<html><body>", "$"
-	html_f                  db              "</body></html>", "$"
-	tabla                   db              "<table>", "$"
-	tabla_f                 db              "</table>", "$"
-	fila                    db              "<tr>", "$"
-	fila_f                  db              "</tr>", "$"
-	columna                 db              "<td>", "$"
-	columna_f               db              "</td>", "$"
+	html                    db				"<html><body>", "$"
+	html_f                  db				"</body></html>", "$"
+	tabla                   db				"<table>", "$"
+	tabla_f                 db				"</table>", "$"
+	fila                    db				"<tr>", "$"
+	fila_f                  db				"</tr>", "$"
+	columna                 db				"<td>", "$"
+	columna_f               db				"</td>", "$"
 	; PROMPT
 	prompt                  db				" Seleccione una Opcion", "$"
 	; FINALIZADO
@@ -90,6 +90,7 @@
 	c_numero                db				03 dup (30)
 	p_codigo_temp           db				05 dup (0)
 	puntero_temp            dw				0000
+	p_borrado               db				02a dup (0)
 .CODE
 .STARTUP
 main:
@@ -395,22 +396,22 @@ main:
 	endm
 
 	igualesCad macro cadena1, cadena2, tam
-		local ciclo
+		local ciclo, diferentes, terminate
 			mov SI, offset cadena1
 			mov DI, offset cadena2
 			mov CX, tam
 		ciclo:
 			mov AL, [SI]
 			cmp [DI], AL
-			jne no_son_iguales
+			jne diferentes
 			inc DI
 			inc SI
 			loop ciclo
 			mov DL, 0ff
-			ret
-		no_son_iguales:
+			jmp terminate
+		diferentes:
 			mov DL, 00
-			ret
+		terminate:
 	endm
 
 	; PROGRAMA
@@ -440,6 +441,7 @@ main:
 		cmp AL, 32 ; OPCION 2: VER PRODUCTOS
 		je verProductos
 		cmp AL, 33 ; OPCION 3: ELIMINAR PRODUCTO
+		je eliminarProducto
 		cmp AL, 34 ; OPCION 4: VOLVER
 		je menuPrincipal
 		jmp menuProductos
@@ -561,33 +563,68 @@ main:
 				jmp menuProductos
 		; *****************************ELIMINAR PRODUCTO*****************************
 		eliminarProducto:
-			; codigoProdEl:
-			; 	print tituloInsCod
-			; 	leerEntrada buffer_entrada
-			; 	lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
-			; 	cmp AL, 00               ; COMPARA AL Y 00H
-			; 	je codigoProdEl            ; SALTA SI AL = 00H
-			; 	cmp AL, 05               ; COMPARA AL Y 05H
-			; 	jb aceptaCodProdEl         ; SALTA SI AL < 05H
-			; 	print line
-			; 	jmp codigoProdEl
-			; aceptaCodProdEl:
-			; 	aceptarCampoYGuardar p_codigo_temp, buffer_entrada
-			; 	mov DX, 0000
-			; 	mov [puntero_temp], DX
-			; buscarProductoEl:
-			; 	mov BX, [h_productos]
-			; 	mov CX, 02c
-			; 	mov DX, offset p_codigo
-			; 	mov AH, 3f
-			; 	int 21
-			; 	cmp AX, 0000
-			; 	je finalizarBusqueda     ; SI AX = 0 SALTA
-			; 	mov DX, [puntero_temp]
-			; 	add DX, 02c
-			; 	mov [puntero_temp], DX
-			; 	mov AL, 0000
-			; 	cmp [p_codigo], AL
+				mov DX, 0000
+				mov [puntero_temp], DX
+			codigoProdEl:
+				print tituloInsCod
+				leerEntrada buffer_entrada
+				lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
+				cmp AL, 00               ; COMPARA AL Y 00H
+				je codigoProdEl            ; SALTA SI AL = 00H
+				cmp AL, 05               ; COMPARA AL Y 05H
+				jb aceptaCodProdEl         ; SALTA SI AL < 05H
+				print line
+				jmp codigoProdEl
+			aceptaCodProdEl:
+				aceptarCampoYGuardar p_codigo_temp, buffer_entrada
+				abrirArchivo f_productos
+				mov [h_productos], AX
+			buscarProductoEl:
+				mov BX, [h_productos]
+				mov CX, 26
+				mov DX, offset p_codigo
+				mov AH, 3f
+				int 21
+				;
+				mov BX, [h_productos]
+				mov CX, 04
+				mov DX, offset n_precio
+				mov AH, 3f
+				int 21
+				;
+				cmp AX, 00
+				je finalizarBorrar    ; SI AX = 0 SALTA
+				mov DX, [puntero_temp]
+				add DX, 02a
+				mov [puntero_temp], DX
+				; VALIDA SI EL PRODUCTO ES VÁLIDO
+				mov AL, 0000
+				cmp [p_codigo], AL
+				je buscarProductoEl
+				; VALIDA QUE EL CÓDIGO INGRESADO COINCIDA CON ALGUNO GUARDADO
+				igualesCad p_codigo_temp, p_codigo, 05 ; VALIDA COINCIDENCIA DE CADENAS, GUARDA RESULTADO EN DL
+				; DL = 0FF : VERDADERO ; DL = 00 : FALSO
+				cmp DL, 0ff           ; COMPARA DL
+				je borrarEncontradoP
+				jmp buscarProductoEl
+			borrarEncontradoP:
+				; POSICIONAR PUNTERO
+				mov DX, [puntero_temp]
+				sub DX, 02a
+				mov CX, 00
+				mov BX, [h_productos]
+				mov AL, 00
+				mov AH, 42
+				int 21
+				; PUNTERO POSICIONADO
+				mov CX, 02a
+				mov DX, offset p_borrado
+				mov AH, 40
+				int 21
+			finalizarBorrar:
+				mov BX, [h_productos]
+				mov AH, 3e
+				int 21
 			jmp menuProductos
 
 	; --- MENÚ VENTAS
