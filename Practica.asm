@@ -558,7 +558,6 @@ main:
 				mov SI, 00
 				jmp cicloVer
 			finVer:
-				print line
 				jmp menuProductos
 		; *****************************ELIMINAR PRODUCTO*****************************
 		eliminarProducto:
