@@ -11,26 +11,26 @@ ___
 
 ## Ventanas Principales
 ### Encabezado
-![Secuencia_inical](./images/encabezado.png "Encabezado")
+![Secuencia_inical](./Images/Encabezado.png "Encabezado")
 ### Menú Principal
 Para navegar entre las diferentes opciones del menú es necesario presionar el número de la opción a la que se desea ingresar.  
-![Secuencia_inical](./images/menup.png "Encabezado")
+![Secuencia_inical](./Images/MenuP.png "Encabezado")
 ### Menú Productos
 Para navegar entre las diferentes opciones del menú es necesario presionar el número de la opción a la que se desea ingresar.  
-![Secuencia_inical](./images/menuprod.png "Encabezado")
+![Secuencia_inical](./Images/MenuProd.png "Encabezado")
 * #### Ingresar Producto
 Los nuevos productos deberán ser ingresados con los siguientes campos:  
-![Secuencia_inical](./images/nuevoprod.png "Encabezado")
+![Secuencia_inical](./Images/NuevoProd.png "Encabezado")
 * #### Ver Productos
 Los productos guardados se podrán visualizar en grupos de 5 productos para un mejor manejo. Para seguir avanzando se requiere presionar la tecla *enter* o para salir de la visualización presionar la tecla *q*.  
-![Secuencia_inical](./images/verproductos.png "Encabezado")
+![Secuencia_inical](./Images/VerProductos.png "Encabezado")
 * #### Eliminar Producto
 ### Menú Ventas
 Para navegar entre las diferentes opciones del menú es necesario presionar el número de la opción a la que se desea ingresar.  
-![Secuencia_inical](./images/menuvent.png "Encabezado")
+![Secuencia_inical](./Images/MenuVent.png "Encabezado")
 ### Menú Herramientas
 Para navegar entre las diferentes opciones del menú es necesario presionar el número de la opción a la que se desea ingresar.  
-![Secuencia_inical](./images/menuherr.png "Encabezado")
+![Secuencia_inical](./Images/MenuHerr.png "Encabezado")
 ___
 # Manual Técnico
 ## Macros Principales
