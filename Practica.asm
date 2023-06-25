@@ -103,10 +103,27 @@
 	puntero_temp            dw				0000
 	p_borrado               db				02a dup (0)
 	u_byte					db				01 dup (0)
+	; LOGIN
+	loginFalla              db				"No Se Pudo Iniciar Sesion", "$"
+	estado                  db				00
+	buffer_linea            db				0ff dup (0)
+	longitud_linea_leida    db				00
+	usuario_c               db				08 dup (0)
+	clave_c                 db				09 dup (0)
+	f_conf                  db				"PRAII.CON", 00
+	h_conf                  dw				0000
+	TOK_cred                db				"[credenciales]"
+	TOK_usuario             db				"usuario"
+	TOK_clave               db				"clave"
+	usuario                 db				"dpichiya"
+	clave                   db				"201908355"
 .CODE
 .STARTUP
 main:
-	; MACROS
+
+; ******************************************************************************************************************
+; ***************************************************** MACROS *****************************************************
+; ******************************************************************************************************************
 
 	; --- PRINTLN
 	println macro text
@@ -228,6 +245,186 @@ main:
 		inc DI
 		mov AL, [DI]
 	endm
+
+	compararCadenas macro cadena1, cadena2, tam
+		local ciclo, diferentes, terminate
+			mov SI, offset cadena1
+			mov DI, offset cadena2
+			mov CX, tam
+		ciclo:
+			mov AL, [SI]
+			cmp [DI], AL
+			jne diferentes
+			inc DI
+			inc SI
+			loop ciclo
+			mov AL, 0ff
+			jmp terminate
+		diferentes:
+			mov AL, 00
+		terminate:
+	endm
+
+	login macro
+        local evaluarLxL, evaluarLinea, retornoCarro, verificarEstado, verificarTagCredenciales, evaluarCredenciales, sinTagCred, credsEncontrado, verificarTagUsuarioOClave, sinTagUsuario, sinTagClave, terminate
+            ; ABRIR ARCHIVO DE CONFIGURACION
+            abrirArchivo f_conf
+            jc loginFallido
+            mov [h_conf], AX
+        evaluarLxL:
+            mov DI, offset buffer_linea
+            mov AL, 00                ; ASIGNACION DE ESTADO INICIAL AUTOMATA
+            mov [longitud_linea_leida], AL
+        evaluarLinea:
+            mov BX, [h_conf]
+            mov AH, 3f
+            mov CX, 01                ; CX = CANTIDAD DE BYTES A LEER
+            mov DX, DI
+            int 21
+            cmp CX, 00                ; CX = BYTES LEIDOS
+            je verificarEstado        ; SALTA AL FINAL SI LEYÓ CERO BYTES
+            ; VALIDACIÓN CARACTER LEIDO
+            mov AL, [DI]              ; AL = CARACTER LEIDO
+            cmp AL, 0d                ; COMPARA AL CON RETORNO DE CARRO
+            je retornoCarro           ; SALTA SI AL = 0D
+            cmp AL, 0a                ; COMPARA AL CON SALTO DE LINEA
+            je verificarEstado        ; SALTA SI AL = 0A
+            ; INCREMENTAR LA LONGITUD DE LA LÍNEA LEIDA
+            mov AL, [longitud_linea_leida]
+            inc AL
+            mov [longitud_linea_leida], AL
+
+            inc DI
+            jmp evaluarLinea
+        retornoCarro:
+            inc DI
+            jmp evaluarLinea
+        verificarEstado:
+            mov AL, 00                   ; AL = ESTADO 0
+            cmp AL, [estado]             ; COMPARA AL CON ESTADO ACTUAL DEL AUTOMATA
+            je verificarTagCredenciales  ; SALTA PARA VERIFICAR SI SE ENCONTRÓ [CREDENCIALES]
+            mov AL, 01                   ; AL = ESTADO 1
+            cmp AL, [estado]             ; COMPARA AL CON ESTADO ACTUAL DEL AUTOMATA
+            je verificarTagUsuarioOClave ; SALTA PARA VERIFICAR SI SE ENCONTRÓ CLAVE O USUARIO
+            mov AL, 02                   ; AL = ESTADO 2
+            cmp AL, [estado]             ; COMPARA AL CON ESTADO ACTUAL DEL AUTOMATA
+            je verificarTagUsuarioOClave ; SALTA PARA VERIFICAR SI SE ENCONTRÓ CLAVE O USUARIO
+            jmp evaluarCredenciales       ; SALTA PARA VALIDAR LAS CREDENCIALES CAPTURADAS
+        verificarTagCredenciales:
+            mov CH, 00
+            mov CL, [TOK_cred]
+            compararCadenas buffer_linea, TOK_cred, 0e  ; COMPARACION DE CADENAS: RESULTADO EN AL
+            cmp AL, 0ff
+            je credsEncontrado
+            mov DI, offset buffer_linea
+            jmp loginFallido
+        credsEncontrado:
+            ; INCREMENTAR EL NÚMERO DE ESTADO DEL AUTÓMATA
+            mov AL, [estado]
+            inc AL
+            mov [estado], AL
+            mov DI, offset buffer_linea
+            jmp evaluarLinea
+        verificarTagUsuarioOClave:
+            ; VALIDACIÓN PARA PALABRA RESERVADA USUARIO
+            mov CH, 00
+            mov CL, [TOK_usuario]
+            compararCadenas buffer_linea, TOK_usuario, 07  ; COMPARACION DE CADENAS: RESULTADO EN AL
+            cmp AL, 0ff
+            je usuarioEncontrado
+            ; VALIDACIÓN PARA PALABRA RESERVADA CLAVE
+            mov CH, 00
+            mov CL, [TOK_clave]
+            compararCadenas buffer_linea, TOK_clave, 05  ; COMPARACION DE CADENAS: RESULTADO EN AL
+            cmp AL, 0ff
+            je claveEncontrado
+            mov DI, offset buffer_linea
+            jmp loginFallido
+        usuarioEncontrado:
+        espacios1:
+            mov AL, [SI]
+            inc SI
+            cmp AL, 20
+            je espacios1
+            cmp AL, 3d
+            je espacios2
+            mov DI, offset buffer_linea
+            jmp loginFallido
+        espacios2:
+            mov AL, [SI]
+            inc SI
+            cmp AL, 20
+            je espacios2
+            cmp AL, 22
+            je guardarUsuario
+            mov DI, offset buffer_linea
+            jmp loginFallido
+        guardarUsuario:
+            mov DI, offset usuario_c
+        cicloGuardarUsuario:
+            mov AL, [SI]
+            mov [DI], AL
+            inc SI
+            inc DI
+            cmp AL, 22
+            jne cicloGuardarUsuario
+            ; INCREMENTAR EL NÚMERO DE ESTADO DEL AUTÓMATA
+            mov AL, [estado]
+            inc AL
+            mov [estado], AL
+            mov DI, offset buffer_linea
+            jmp evaluarLinea
+        claveEncontrado:
+        espacios3:
+            mov AL, [SI]
+            inc SI
+            cmp AL, 20
+            je espacios3
+            cmp AL, 3d
+            je espacios4
+            mov DI, offset buffer_linea
+            jmp loginFallido
+        espacios4:
+            mov AL, [SI]
+            inc SI
+            cmp AL, 20
+            je espacios4
+            cmp AL, 22
+            je guardarClave
+            mov DI, offset buffer_linea
+            jmp loginFallido
+        guardarClave:
+            mov DI, offset clave_c
+        cicloGuardarClave:
+            mov AL, [SI]
+            mov [DI], AL
+            inc SI
+            inc DI
+            cmp AL, 22
+            jne cicloGuardarClave
+            ; INCREMENTAR EL NÚMERO DE ESTADO DEL AUTÓMATA
+            mov AL, [estado]
+            inc AL
+            mov [estado], AL
+            mov DI, offset buffer_linea
+            jmp evaluarLinea
+        loginFallido:
+			mov AL, 00
+            jmp terminate
+        evaluarCredenciales:
+            ; VALIDACION DE USUARIO
+            compararCadenas usuario, usuario_c, 08
+            cmp AL, 00
+            mov DI, offset buffer_linea
+            je loginFallido
+            ; VALIDACION DE CLAVE
+            compararCadenas clave, clave_c, 09
+            cmp AL, 00
+            mov DI, offset buffer_linea
+            je loginFallido
+			mov AL, 0ff
+        terminate:
+    endm
 
 	; --- ACEPTAR CAMPO Y GUARDAR EN ESTRUCTURA
 	aceptarCampoYGuardar macro campo, buffer
@@ -463,26 +660,16 @@ main:
 			loop ciclo
 	endm
 
-	igualesCad macro cadena1, cadena2, tam
-		local ciclo, diferentes, terminate
-			mov SI, offset cadena1
-			mov DI, offset cadena2
-			mov CX, tam
-		ciclo:
-			mov AL, [SI]
-			cmp [DI], AL
-			jne diferentes
-			inc DI
-			inc SI
-			loop ciclo
-			mov DL, 0ff
-			jmp terminate
-		diferentes:
-			mov DL, 00
-		terminate:
-	endm
+; ******************************************************************************************************************
+; **************************************************** PROGRAMA ****************************************************
+; ******************************************************************************************************************
 
-	; PROGRAMA
+	; LOGUEO
+	login
+	cmp AL, 00
+    je terminateError
+
+	; ENCABEZADO
 	encabezado:
 		imprimirEncabezado
 
@@ -675,9 +862,9 @@ main:
 				cmp [p_codigo], AL
 				je buscarProductoEl
 				; VALIDA QUE EL CÓDIGO INGRESADO COINCIDA CON ALGUNO GUARDADO
-				igualesCad p_codigo_temp, p_codigo, 05 ; VALIDA COINCIDENCIA DE CADENAS, GUARDA RESULTADO EN DL
-				; DL = 0FF : VERDADERO ; DL = 00 : FALSO
-				cmp DL, 0ff           ; COMPARA DL
+				compararCadenas p_codigo_temp, p_codigo, 05 ; VALIDA COINCIDENCIA DE CADENAS, GUARDA RESULTADO EN DL
+				; AL = 0FF : VERDADERO ; DL = 00 : FALSO
+				cmp AL, 0ff           ; COMPARA DL
 				je borrarEncontradoP
 				jmp buscarProductoEl
 			borrarEncontradoP:
@@ -708,8 +895,16 @@ main:
 		imprimirMenuVentas
 		leerCaracter
 		cmp AL, 31 ; OPCION 1: REALIZAR VENTA
+		je realizarVenta
 		cmp AL, 32 ; OPCION 2: VOLVER
 		je menuPrincipal
+		realizarVenta:
+			println tituloVender
+			print tituloVenCan
+			leerEntrada buffer_entrada
+			print tituloVenCod
+			leerEntrada buffer_entrada
+			println tituloVender_f
 		jmp menuVentas
 
 	; --- MENÚ HERRAMIENTAS
@@ -723,6 +918,8 @@ main:
 		cmp AL, 35 ; OPCION 5: VOLVER
 		je menuPrincipal
 		jmp menuHerramientas
+terminateError:
+	println loginFalla
 terminate:
 	println finalizado
 .EXIT
