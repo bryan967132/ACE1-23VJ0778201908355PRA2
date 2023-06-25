@@ -7,6 +7,7 @@
 	; LÍNEAS
 	guion                   db				" - ", "$"
 	line                    db				0a, "$"
+	u_space                 db				" ", "$"
 	cornUL                  db				0c9, "$"
 	cornDL                  db				0c8, "$"
 	middleL                 db				0cc, "$"
@@ -61,11 +62,21 @@
 	tituloRepoAgotH         db				0ba, " 4. Reporte De Productos Agotados               ", 0ba, "$"
 	tituloVolverH           db				0ba, " 5. Volver                                      ", 0ba, "$"
 	; DATOS DE PRODUCTO
-	tituloInsertar          db				" Insertar Producto", "$"
+	tituloInsertar          db				" ----------- Insertar Nuevo Producto ------------", "$"
+	tituloInsertar_f        db				" --------- Fin Insertar Nuevo Producto ----------", "$"
+	tituloVer               db				" -------------- Lista De Productos --------------", "$"
+	tituloVer_f             db				" ------------ Fin Lista De Productos ------------", "$"
+	tituloEliminar          db				" -------------- Eliminar Productos --------------", "$"
+	tituloEliminar_f        db				" ------------ Fin Eliminar Productos ------------", "$"
 	tituloInsCod            db				" Codigo: ", "$"
 	tituloInsDes            db				" Descripcion: ", "$"
 	tituloInsPre            db				" Precio: ", "$"
 	tituloInsUni            db				" Unidades: ", "$"
+	; DATOS DE VENTA
+	tituloVender            db				" ----------------- Nueva Venta ------------------", "$"
+	tituloVender_f          db				" --------------- Fin Nueva Venta ----------------", "$"
+	tituloVenCan            db				" Cantidad de Productos (10 Maximo): ", "$"
+	tituloVenCod            db				" Codigo: ", "$"
 	; ARCHIVOS
 	f_productos             db				"PROD.BIN", 00
 	f_ventas                db				"VENT.BIN", 00
@@ -236,13 +247,11 @@ main:
 			loop copiarCampoAEstructura
 	endm
 
-	
-
 	limpiarArchivoProductos macro
 		local buscarDolar, borrarDolar, finalizarBorrar
 			mov DX, 0000
 			mov [puntero_temp], DX
-			abrirArchivo f_productos
+			abrirArchivoM f_productos
 			mov [h_productos], AX
 		buscarDolar:
 			mov BX, [h_productos]
@@ -283,10 +292,9 @@ main:
 			mov BX, [h_productos]
 			mov AH, 3e
 			int 21
-		jmp menuProductos
 	endm
 
-	abrirArchivo macro archivo
+	abrirArchivoM macro archivo
 		local crearArchivo, terminate
 			; INTENTAR ABRIR EL ARCHIVO NORMALMENTE
 			mov AL, 02
@@ -304,6 +312,13 @@ main:
 			int 21
 			; ARCHIVO ABIERTO
 		terminate:
+	endm
+
+	abrirArchivo macro archivo
+		mov AL, 02
+		mov AH, 3d
+		mov DX, offset archivo
+		int 21
 	endm
 
 	escribirAlFinalArchivoProducto macro handle, campo, precio
@@ -427,7 +442,9 @@ main:
 		;println p_unidades
 		print line
 	endm
+
 	imprimirProducto macro codigo, descripcion
+		print u_space
 		obtenerCampo codigo
 		print codigo
 		print guion
@@ -561,7 +578,7 @@ main:
 				memset p_unidades, 03
 				; parseNum n_unidades, p_unidades
 			; ----------------------MANEJO ARCHIVO PRODUCTO-----------------------
-			abrirArchivo f_productos     ; ABRIR ARCHIVO SI EXISTE, SI NO EXISTE LO CREA Y ABRE
+			abrirArchivoM f_productos     ; ABRIR ARCHIVO SI EXISTE, SI NO EXISTE LO CREA Y ABRE
 			escribirAlFinalArchivoProducto h_productos, p_codigo, n_precio
 			cerrarArchivo
 			memset p_codigo, 05
@@ -570,10 +587,13 @@ main:
 			print line
 			print line
 			limpiarArchivoProductos
+			println tituloInsertar_f
 			jmp menuProductos
 		; *******************************VER PRODUCTO********************************
 		verProductos:
+			println tituloVer
 			abrirArchivo f_productos
+			jc finVer
 			mov [h_productos], AX
 			; RECORRER EL ARCHIVO (LEER)
 			mov SI, 00
@@ -609,10 +629,12 @@ main:
 				mov SI, 00
 				jmp cicloVer
 			finVer:
+				println tituloVer_f
 				jmp menuProductos
 			
 		; *****************************ELIMINAR PRODUCTO*****************************
 		eliminarProducto:
+				println tituloEliminar
 				mov DX, 0000
 				mov [puntero_temp], DX
 			codigoProdEl:
@@ -628,6 +650,7 @@ main:
 			aceptaCodProdEl:
 				aceptarCampoYGuardar p_codigo_temp, buffer_entrada
 				abrirArchivo f_productos
+				jc finalizarB
 				mov [h_productos], AX
 			buscarProductoEl:
 				mov BX, [h_productos]
@@ -675,6 +698,9 @@ main:
 				mov BX, [h_productos]
 				mov AH, 3e
 				int 21
+			finalizarB:
+				print line
+				println tituloEliminar_f
 			jmp menuProductos
 
 	; --- MENÚ VENTAS
