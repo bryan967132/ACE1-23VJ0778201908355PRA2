@@ -662,12 +662,12 @@ main:
 		je terminateError
 		; VALIDACION DE USUARIO
 		compararCadenas usuario, usuario_c, 08
-        cmp AL, 00
-        je loginFallido
-        ; VALIDACION DE CLAVE
-        compararCadenas clave, clave_c, 09
-        cmp AL, 00
-        je loginFallido
+		cmp AL, 00
+		je loginFallido
+		; VALIDACION DE CLAVE
+		compararCadenas clave, clave_c, 09
+		cmp AL, 00
+		je loginFallido
 
 	; ENCABEZADO
 	encabezado:
