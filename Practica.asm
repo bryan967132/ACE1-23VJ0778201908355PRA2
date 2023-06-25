@@ -78,6 +78,7 @@
 	tituloVenCan            db				" Cantidad de Productos (10 Maximo): ", "$"
 	tituloVenCod            db				" Codigo: ", "$"
 	; ARCHIVOS
+	f_conf                  db				"PRAII.CON", 00
 	f_productos             db				"PROD.BIN", 00
 	f_ventas                db				"VENT.BIN", 00
 	f_repcatalogo           db				"CATALG.HTM", 00
@@ -91,6 +92,7 @@
 	h_repalfabetico         dw				0000
 	h_repventas             dw				0000
 	h_repfalta              dw				0000
+	h_conf                  dw				0000
 	; ESTRUCTURA PRODUCTO
 	p_codigo                db				05 dup (0)
 	p_descripcion           db				21 dup (0)
@@ -110,8 +112,6 @@
 	longitud_linea_leida    db				00
 	usuario_c               db				08 dup (0)
 	clave_c                 db				09 dup (0)
-	f_conf                  db				"PRAII.CON", 00
-	h_conf                  dw				0000
 	TOK_cred                db				"[credenciales]"
 	TOK_usuario             db				"usuario"
 	TOK_clave               db				"clave"
@@ -265,7 +265,7 @@ main:
 		terminate:
 	endm
 
-	login macro
+	parseoConfig macro
         local evaluarLxL, evaluarLinea, retornoCarro, verificarEstado, verificarTagCredenciales, evaluarCredenciales, sinTagCred, credsEncontrado, verificarTagUsuarioOClave, sinTagUsuario, sinTagClave, terminate
             ; ABRIR ARCHIVO DE CONFIGURACION
             abrirArchivo f_conf
@@ -309,7 +309,7 @@ main:
             mov AL, 02                   ; AL = ESTADO 2
             cmp AL, [estado]             ; COMPARA AL CON ESTADO ACTUAL DEL AUTOMATA
             je verificarTagUsuarioOClave ; SALTA PARA VERIFICAR SI SE ENCONTRÓ CLAVE O USUARIO
-            jmp evaluarCredenciales       ; SALTA PARA VALIDAR LAS CREDENCIALES CAPTURADAS
+            jmp loginExitoso             ; SALTA PARA VALIDAR LAS CREDENCIALES CAPTURADAS
         verificarTagCredenciales:
             mov CH, 00
             mov CL, [TOK_cred]
@@ -411,17 +411,7 @@ main:
         loginFallido:
 			mov AL, 00
             jmp terminate
-        evaluarCredenciales:
-            ; VALIDACION DE USUARIO
-            compararCadenas usuario, usuario_c, 08
-            cmp AL, 00
-            mov DI, offset buffer_linea
-            je loginFallido
-            ; VALIDACION DE CLAVE
-            compararCadenas clave, clave_c, 09
-            cmp AL, 00
-            mov DI, offset buffer_linea
-            je loginFallido
+        loginExitoso:
 			mov AL, 0ff
         terminate:
     endm
@@ -665,9 +655,19 @@ main:
 ; ******************************************************************************************************************
 
 	; LOGUEO
-	login
-	cmp AL, 00
-    je terminateError
+	login:
+		; PARSEO DEL ARCHIVO DE CONFIGURACION
+		parseoConfig
+		cmp AL, 00
+		je terminateError
+		; VALIDACION DE USUARIO
+		compararCadenas usuario, usuario_c, 08
+        cmp AL, 00
+        je loginFallido
+        ; VALIDACION DE CLAVE
+        compararCadenas clave, clave_c, 09
+        cmp AL, 00
+        je loginFallido
 
 	; ENCABEZADO
 	encabezado:
