@@ -77,6 +77,8 @@
 	tituloVender_f          db				" --------------- Fin Nueva Venta ----------------", "$"
 	tituloVenCan            db				" Cantidad de Productos (10 Maximo): ", "$"
 	tituloVenCod            db				" Codigo: ", "$"
+	tituloVenUni            db				" Unidades: ", "$"
+	tituloVendido           db				" Producto Vendido", "$"
 	; ARCHIVOS
 	f_conf                  db				"PRAII.CON", 00
 	f_productos             db				"PROD.BIN", 00
@@ -105,6 +107,11 @@
 	puntero_temp            dw				0000
 	p_borrado               db				02a dup (0)
 	u_byte					db				01 dup (0)
+	; ESTRUCTURA VENTA
+	v_items                 db				02 dup (0)
+	v_codigo                db				05 dup (0)
+	v_unidades              db				05 dup (0)
+	n_items                 dw				0000
 	; LOGIN
 	loginFalla              db				"No Se Pudo Iniciar Sesion", "$"
 	estado                  db				00
@@ -124,29 +131,25 @@ main:
 ; ******************************************************************************************************************
 ; ***************************************************** MACROS *****************************************************
 ; ******************************************************************************************************************
-
-	; --- PRINTLN
-	println macro text
+	; -------------------------------------- PRINT ---------------------------------------
+	print macro text
+		mov DX, offset u_space
+		mov AH, 09
+		int 21
 		mov DX, offset text
 		mov AH, 09
 		int 21
+	endm
+	; ------------------------------------- PRINTLN --------------------------------------
+	println macro text
+		print text
 		mov DX, offset line
 		mov AH, 09
 		int 21
 	endm
-
-	; --- PRINT
-	print macro text
-		mov DX, offset text
-		mov AH, 09
-		int 21
-	endm
-
-	; --- PRINTLINEM
+	; ------------------------------------ PRINTLINEM ------------------------------------
 	printLineM macro charL, charR
-		mov DX, offset charL
-		mov AH, 09
-		int 21
+		print charL
 		mov DX, offset lineL
 		mov AH, 09
 		int 21
@@ -157,8 +160,7 @@ main:
 		mov AH, 09
 		int 21
 	endm
-
-	; --- IMPRIMIR ENCABEZADO
+	; ------------------------------- IMPRIMIR ENCABEZADO --------------------------------
 	imprimirEncabezado macro
 		printLineM cornUL, cornUR
 		println universidad
@@ -170,8 +172,7 @@ main:
 		println carnet
 		printLineM cornDL, cornDR
 	endm
-
-	; --- IMPRIMIR MENÚ PRINCIPAL
+	; ----------------------------- IMPRIMIR MENÚ PRINCIPAL ------------------------------
 	imprimirMenuPrincipal macro
 		printLineM cornUL, cornUR
 		println tituloMenuP
@@ -184,8 +185,7 @@ main:
 		println prompt
 		print line
 	endm
-
-	; --- IMPRIMIR MENÚ PRODUCTOS
+	; ----------------------------- IMPRIMIR MENÚ PRODUCTOS ------------------------------
 	imprimirMenuProductos macro
 		printLineM cornUL, cornUR
 		println tituloMenuProductos
@@ -198,8 +198,7 @@ main:
 		println prompt
 		print line
 	endm
-
-	; --- IMPRIMIR MENÚ VENTAS
+	; ------------------------------- IMPRIMIR MENÚ VENTAS -------------------------------
 	imprimirMenuVentas macro
 		printLineM cornUL, cornUR
 		println tituloMenuVentas
@@ -210,8 +209,7 @@ main:
 		println prompt
 		print line
 	endm
-
-	; --- IMPRIMIR MENÚ HERRAMIENTAS
+	; ---------------------------- IMPRIMIR MENÚ HERRAMIENTAS ----------------------------
 	imprimirMenuHerramientas macro
 		printLineM cornUL, cornUR
 		println tituloMenuHerramientas
@@ -225,27 +223,24 @@ main:
 		println prompt
 		print line
 	endm
-
-	; --- LEER CARACTER
+	; ---------------------------------- LEER CARACTER -----------------------------------
 	leerCaracter macro
 		mov AH, 08
 		int 21
 	endm
-
-	; --- LEER ENTRADA POR TECLADO
+	; ----------------------------- LEER ENTRADA POR TECLADO -----------------------------
 	leerEntrada macro buffer
 		mov DX, offset buffer
 		mov AH, 0a
 		int 21
 	endm
-
-	; --- LONGITUD CADENA
+	; --------------------------------- LONGITUD CADENA ----------------------------------
 	lenCadena macro buffer
 		mov DI, offset buffer
 		inc DI
 		mov AL, [DI]
 	endm
-
+	; ------------------------------ COMPARACIÓN DE CADENAS ------------------------------
 	compararCadenas macro cadena1, cadena2, tam
 		local ciclo, diferentes, terminate
 			mov SI, offset cadena1
@@ -264,9 +259,9 @@ main:
 			mov AL, 00
 		terminate:
 	endm
-
+	;------------------ PARSEO DE CONTENIDO DE ARCHIVO DE CONFIGURACIÓN-------------------
 	parseoConfig macro
-        local evaluarLxL, evaluarLinea, retornoCarro, verificarEstado, verificarTagCredenciales, evaluarCredenciales, sinTagCred, credsEncontrado, verificarTagUsuarioOClave, sinTagUsuario, sinTagClave, terminate
+        local loginFallido, loginExitoso, evaluarLxL, evaluarLinea, retornoCarro, verificarEstado, verificarTagCredenciales, credsEncontrado, verificarTagUsuarioOClave, usuarioEncontrado, espacios1, espacios2, guardarUsuario, cicloGuardarUsuario, claveEncontrado, espacios3, espacios4, guardarClave, cicloGuardarClave, terminate
             ; ABRIR ARCHIVO DE CONFIGURACION
             abrirArchivo f_conf
             jc loginFallido
@@ -293,7 +288,6 @@ main:
             mov AL, [longitud_linea_leida]
             inc AL
             mov [longitud_linea_leida], AL
-
             inc DI
             jmp evaluarLinea
         retornoCarro:
@@ -415,8 +409,7 @@ main:
 			mov AL, 0ff
         terminate:
     endm
-
-	; --- ACEPTAR CAMPO Y GUARDAR EN ESTRUCTURA
+	; ---------------------- ACEPTAR CAMPO Y GUARDAR EN ESTRUCTURA -----------------------
 	aceptarCampoYGuardar macro campo, buffer
 		local aceptarCampo, copiarCampoAEstructura
 		aceptarCampo:
@@ -433,7 +426,7 @@ main:
 			inc DI
 			loop copiarCampoAEstructura
 	endm
-
+	; ---------------------------- LIMPIAR ARCHIVO PRODUCTOS -----------------------------
 	limpiarArchivoProductos macro
 		local buscarDolar, borrarDolar, finalizarBorrar
 			mov DX, 0000
@@ -480,7 +473,7 @@ main:
 			mov AH, 3e
 			int 21
 	endm
-
+	; ----------------------- ABRIR ARCHIVO Y CREARLO SI NO EXISTE -----------------------
 	abrirArchivoM macro archivo
 		local crearArchivo, terminate
 			; INTENTAR ABRIR EL ARCHIVO NORMALMENTE
@@ -500,14 +493,14 @@ main:
 			; ARCHIVO ABIERTO
 		terminate:
 	endm
-
+	; ---------------------------------- ABRIR ARCHIVO -----------------------------------
 	abrirArchivo macro archivo
 		mov AL, 02
 		mov AH, 3d
 		mov DX, offset archivo
 		int 21
 	endm
-
+	; --------------------- ESCRIBIR AL FINAL DEL ARCHIVO PRODUCTOS ----------------------
 	escribirAlFinalArchivoProducto macro handle, campo, precio
 		mov [handle], AX            ; GUARDAR HANDLE
 		mov BX, [handle]            ; OBTENER HANDLE
@@ -528,12 +521,12 @@ main:
 		mov AH, 40
 		int 21
 	endm
-
+	; ---------------------------------- CERRAR ARCHIVO ----------------------------------
 	cerrarArchivo macro
 		mov AH, 3e
 		int 21
 	endm
-
+	; --------------------------------- CADENA A NÚMERO ----------------------------------
 	parseNum macro numero, cadena
 		local convertir, terminate
 			mov DI, offset cadena
@@ -553,7 +546,7 @@ main:
 		terminate:
 			mov [numero], AX
 	endm
-
+	; --------------------------------- NÚMERO A CADENA ----------------------------------
 	parseCad macro cadena, numero
 		local ciclo, cicloConvertir, aumentos, aumentarSiguiente, terminate
 			mov AX, [numero]
@@ -592,7 +585,7 @@ main:
 			loop cicloConvertir
 		terminate:
 	endm
-
+	; ---------------------------------- OBTENER CAMPO -----------------------------------
 	obtenerCampo macro campo
 		local ciclo, ponerDolar
 			mov DI, offset campo
@@ -606,7 +599,7 @@ main:
 			mov AL, 24 ;; DÓLAR
 			mov [DI], AL
 	endm
-
+	; -------------------- IMPRIMIR PRODUCTO CON TODOS SUS ATRIBUTOS ---------------------
 	imprimirProductoT macro codigo, descripcion, precio, unidades
 		obtenerCampo codigo
 		print codigo
@@ -629,7 +622,7 @@ main:
 		;println p_unidades
 		print line
 	endm
-
+	; -------------------------------- IMPRIMIR PRODUCTO ---------------------------------
 	imprimirProducto macro codigo, descripcion
 		print u_space
 		obtenerCampo codigo
@@ -638,7 +631,7 @@ main:
 		obtenerCampo descripcion
 		println descripcion
 	endm
-
+	; -------------------------------------- MEMSET --------------------------------------
 	memset macro campo, longitud
 		local ciclo, terminate
 			mov DI, offset campo
@@ -649,12 +642,12 @@ main:
 			inc DI
 			loop ciclo
 	endm
-
 ; ******************************************************************************************************************
 ; **************************************************** PROGRAMA ****************************************************
 ; ******************************************************************************************************************
-
-	; LOGUEO
+	; ------------------------------------------------------------------------------------
+	; -------------------------------------- LOGUEO --------------------------------------
+	; ------------------------------------------------------------------------------------
 	login:
 		; PARSEO DEL ARCHIVO DE CONFIGURACION
 		parseoConfig
@@ -663,17 +656,19 @@ main:
 		; VALIDACION DE USUARIO
 		compararCadenas usuario, usuario_c, 08
 		cmp AL, 00
-		je loginFallido
+		je terminateError
 		; VALIDACION DE CLAVE
 		compararCadenas clave, clave_c, 09
 		cmp AL, 00
-		je loginFallido
-
-	; ENCABEZADO
+		je terminateError
+	; ------------------------------------------------------------------------------------
+	; ------------------------------------ ENCABEZADO ------------------------------------
+	; ------------------------------------------------------------------------------------
 	encabezado:
 		imprimirEncabezado
-
-	; --- MENÚ PRINCIPAL
+	; ------------------------------------------------------------------------------------
+	; ---------------------------------- MENÚ PRINCIPAL ----------------------------------
+	; ------------------------------------------------------------------------------------
 	menuPrincipal:
 		imprimirMenuPrincipal
 		leerCaracter
@@ -686,8 +681,9 @@ main:
 		cmp AL, 34 ; OPCION 4: SALIR
 		je terminate
 		jmp menuPrincipal
-
-	; --- MENÚ PRODUCTOS
+	; ------------------------------------------------------------------------------------
+	; ---------------------------------- MENÚ PRODUCTOS ----------------------------------
+	; ------------------------------------------------------------------------------------
 	menuProductos:
 		imprimirMenuProductos
 		leerCaracter
@@ -703,7 +699,7 @@ main:
 		; ****************************INGRESO DE PRODUCTO****************************
 		ingresoProducto:
 			println tituloInsertar
-			; --------------------------CODIGO PRODUCTO---------------------------
+			; ------------------------- CODIGO PRODUCTO --------------------------
 			codigoProd:
 				print tituloInsCod
 				leerEntrada buffer_entrada
@@ -716,7 +712,7 @@ main:
 				jmp codigoProd
 			aceptaCodProd:
 				aceptarCampoYGuardar p_codigo, buffer_entrada
-			; ------------------------DESCRIPCIÓN PRODUCTO------------------------
+			; ----------------------- DESCRIPCIÓN PRODUCTO -----------------------
 			print line
 			descripcionProd:
 				print tituloInsDes
@@ -730,7 +726,7 @@ main:
 				jmp descripcionProd
 			aceptaDesProd:
 				aceptarCampoYGuardar p_descripcion, buffer_entrada
-			; --------------------------PRECIO PRODUCTO---------------------------
+			; ------------------------- PRECIO PRODUCTO --------------------------
 			print line
 			precioProd:
 				print tituloInsPre
@@ -747,7 +743,7 @@ main:
 				parseNum n_precio, p_precio
 				memset p_precio, 03
 				; parseNum n_precio, p_precio
-			; -------------------------UNIDADES PRODUCTO--------------------------
+			; ------------------------ UNIDADES PRODUCTO -------------------------
 			print line
 			unidadesProd:
 				print tituloInsUni
@@ -764,19 +760,19 @@ main:
 				parseNum n_unidades, p_unidades
 				memset p_unidades, 03
 				; parseNum n_unidades, p_unidades
-			; ----------------------MANEJO ARCHIVO PRODUCTO-----------------------
+			; --------------------- MANEJO ARCHIVO PRODUCTO ----------------------
 			abrirArchivoM f_productos     ; ABRIR ARCHIVO SI EXISTE, SI NO EXISTE LO CREA Y ABRE
 			escribirAlFinalArchivoProducto h_productos, p_codigo, n_precio
 			cerrarArchivo
 			memset p_codigo, 05
 			memset p_descripcion, 21
-			; ------------------------FIN INGRESO PRODUCTO------------------------
+			; ----------------------- FIN INGRESO PRODUCTO -----------------------
 			print line
 			print line
 			limpiarArchivoProductos
 			println tituloInsertar_f
 			jmp menuProductos
-		; *******************************VER PRODUCTO********************************
+		; ****************************** VER PRODUCTO *******************************
 		verProductos:
 			println tituloVer
 			abrirArchivo f_productos
@@ -784,6 +780,7 @@ main:
 			mov [h_productos], AX
 			; RECORRER EL ARCHIVO (LEER)
 			mov SI, 00
+			; --------------------- IMPRESIÓN DE PRODUCTOS -----------------------
 			cicloVer:
 				mov BX, [h_productos]
 				mov CX, 02a
@@ -818,12 +815,12 @@ main:
 			finVer:
 				println tituloVer_f
 				jmp menuProductos
-			
-		; *****************************ELIMINAR PRODUCTO*****************************
+		; **************************** ELIMINAR PRODUCTO ****************************
 		eliminarProducto:
 				println tituloEliminar
 				mov DX, 0000
 				mov [puntero_temp], DX
+			; ------------------------- CODIGO PRODUCTO --------------------------
 			codigoProdEl:
 				print tituloInsCod
 				leerEntrada buffer_entrada
@@ -883,14 +880,14 @@ main:
 				int 21
 			finalizarBorrar:
 				mov BX, [h_productos]
-				mov AH, 3e
-				int 21
+				cerrarArchivo
 			finalizarB:
 				print line
 				println tituloEliminar_f
 			jmp menuProductos
-
-	; --- MENÚ VENTAS
+	; ------------------------------------------------------------------------------------
+	; ----------------------------------- MENÚ VENTAS ------------------------------------
+	; ------------------------------------------------------------------------------------
 	menuVentas:
 		imprimirMenuVentas
 		leerCaracter
@@ -898,16 +895,56 @@ main:
 		je realizarVenta
 		cmp AL, 32 ; OPCION 2: VOLVER
 		je menuPrincipal
+		jmp menuVentas
+		; *************************** VENTA DE PRODUCTOS ****************************
 		realizarVenta:
 			println tituloVender
-			print tituloVenCan
-			leerEntrada buffer_entrada
-			print tituloVenCod
-			leerEntrada buffer_entrada
+			; ------------------------ CANTIDAD DE ITEMS -------------------------
+			cantVent:
+					print tituloVenCan
+					leerEntrada buffer_entrada
+					lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
+					cmp AL, 00               ; COMPARA AL Y 00H
+					je cantVent              ; SALTA SI AL = 00H
+					cmp AL, 03               ; COMPARA AL Y 05H
+					jb validarItems          ; SALTA SI AL < 05H
+					print line
+					jmp cantVent
+				validarItems:
+					aceptarCampoYGuardar v_items, buffer_entrada
+					parseNum n_items, v_items
+					cmp n_items, 00
+					je noItems
+					cmp n_items, 0b
+					jb iniciarVenta
+					print line
+					memset v_items, 03
+					jmp cantVent
+				noItems:
+					print line
+					memset v_items, 03
+					jmp cantVent
+			; --------------------- PRODUCTOS PARA LA VENTA ----------------------
+			iniciarVenta:
+				print line
+				mov SI, 00
+			insertarProductoV:
+				codVent:
+					print tituloVenCod
+					leerEntrada buffer_entrada
+					print line
+					print tituloVenUni
+					leerEntrada buffer_entrada
+					print line
+					println tituloVendido
+					inc SI
+					cmp SI, [n_items]
+					jb codVent
 			println tituloVender_f
-		jmp menuVentas
-
-	; --- MENÚ HERRAMIENTAS
+			jmp menuVentas
+	; ------------------------------------------------------------------------------------
+	; -------------------------------- MENÚ HERRAMIENTAS ---------------------------------
+	; ------------------------------------------------------------------------------------
 	menuHerramientas:
 		imprimirMenuHerramientas
 		leerCaracter
