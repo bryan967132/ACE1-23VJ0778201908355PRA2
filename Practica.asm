@@ -268,7 +268,7 @@ main:
 		terminate:
 	endm
 	;------------------ PARSEO DE CONTENIDO DE ARCHIVO DE CONFIGURACIÓN-------------------
-	parseoConfig macro
+	parseConf macro
         local loginFallido, loginExitoso, evaluarLxL, evaluarLinea, retornoCarro, verificarEstado, verificarTagCredenciales, credsEncontrado, verificarTagUsuarioOClave, usuarioEncontrado, espacios1, espacios2, guardarUsuario, cicloGuardarUsuario, claveEncontrado, espacios3, espacios4, guardarClave, cicloGuardarClave, terminate
             ; ABRIR ARCHIVO DE CONFIGURACION
             abrirArchivo f_conf
@@ -569,7 +569,7 @@ main:
 			mov CX, AX                ; INICIALIZAR CONTADOR
 			mov DI, offset cadena
 			add DI, 0004
-			;;
+			;
 		cicloConvertir:
 			mov BL, [DI]
 			inc BL
@@ -741,8 +741,7 @@ main:
 			mov DI, offset campo
 		evaluar:
 			mov AL, [DI]              ; 
-			mov [caracter], AL        ; CARACTER = AL
-			isDigit caracter          ; VALIDAR CARACTER COMO DÍGITO, RESULTADO EN DL
+			isDigit AL          ; VALIDAR CARACTER COMO DÍGITO, RESULTADO EN DL
 			cmp DL, 0ff               ; COMPARA DL CON 0FF
 			je continuar              ; SALTA A CONTINUAR SI EL CARACTER ES DIGÍTO
 			isAlphaU AL               ; VALIDAR CARACTER COMO LETRA MAYÚSCULA, RESULTADO EN DL
@@ -776,8 +775,7 @@ main:
 			mov DI, offset campo
 		evaluar:
 			mov AL, [DI]              ; 
-			mov [caracter], AL        ; CARACTER = AL
-			isDigit caracter          ; VALIDAR CARACTER COMO DÍGITO, RESULTADO EN DL
+			isDigit AL                ; VALIDAR CARACTER COMO DÍGITO, RESULTADO EN DL
 			cmp DL, 0ff               ; COMPARA DL CON 0FF
 			je continuar              ; SALTA A CONTINUAR SI EL CARACTER ES DIGÍTO
 			isAlphaU AL               ; VALIDAR CARACTER COMO LETRA MAYÚSCULA, RESULTADO EN DL
@@ -822,8 +820,7 @@ main:
 			mov DI, offset campo
 		evaluar:
 			mov AL, [DI]              ; 
-			mov [caracter], AL        ; CARACTER = AL
-			isDigit caracter          ; VALIDAR CARACTER COMO DÍGITO, RESULTADO EN DL
+			isDigit AL          ; VALIDAR CARACTER COMO DÍGITO, RESULTADO EN DL
 			cmp DL, 0ff               ; COMPARA DL CON 0FF
 			je continuar              ; SALTA A CONTINUAR SI EL CARACTER ES DIGÍTO
 			jmp terminateF            ; SALTA A FALSO SI EL CARACTER NO CUMPLE CON LAS VALIDACIONES ANTERIORES
@@ -845,7 +842,7 @@ main:
 	; ------------------------------------------------------------------------------------
 	login:
 		; PARSEO DEL ARCHIVO DE CONFIGURACION
-		parseoConfig
+		parseConf
 		cmp AL, 00
 		je confError
 		; VALIDACION DE USUARIO
@@ -996,7 +993,6 @@ main:
 			aceptaUniProd:
 				stoi n_unidades, p_unidades
 				memset p_unidades, 03
-				; stoi n_unidades, p_unidades
 			; --------------------- MANEJO ARCHIVO PRODUCTO ----------------------
 			abrirArchivoM f_productos     ; ABRIR ARCHIVO SI EXISTE, SI NO EXISTE LO CREA Y ABRE
 			escribirAlFinalArchivoProducto h_productos, p_codigo, n_precio
@@ -1138,6 +1134,8 @@ main:
 				mov BX, [h_productos]
 				cerrarArchivo
 			finalizarB:
+				memset p_codigo, 05
+				memset p_codigo_temp, 05
 				print line
 				println tituloEliminar_f
 			jmp menuProductos
