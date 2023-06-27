@@ -27,7 +27,7 @@ Los nuevos productos deberán ser ingresados con los siguientes campos:
 Los productos guardados se podrán visualizar en grupos de 5 productos para un mejor manejo. Para seguir avanzando se requiere presionar la tecla *enter* o para salir de la visualización presionar la tecla *q*.  
 ![Ver Productos](./Images/VerProductos.png "Ver Productos")
 * #### Eliminar Producto
-Los prouctos guardados podrán ser eliminados. Al ingresar el código de producto se verificará que tenga el formato correcto y que el código pertenezca a alguno de los productos registrados en el sistema.
+Los prouctos guardados podrán ser eliminados. Al ingresar el código de producto se verificará que tenga el formato correcto y que el código pertenezca a alguno de los productos registrados en el sistema.  
 ![Eliminar Producto](./Images/Eliminacion.png "Eliminar Producto")  
 ![Eliminar Producto](./Images/Eliminacion1.png "Eliminar Producto")
 ### Menú Ventas
@@ -37,6 +37,7 @@ Para navegar entre las diferentes opciones del menú es necesario presionar el n
 Para navegar entre las diferentes opciones del menú es necesario presionar el número de la opción a la que se desea ingresar.  
 ![Menú Herramientas](./Images/MenuHerr.png "Menú Herramientas")
 ### Validación De Campos
+En cada campo de insersión se verifica que cumpla con un formato específico.  
 ![Validación De Campo](./Images/ValidacionEntradas.png "Validación De Campo")
 
 ___
@@ -526,6 +527,7 @@ isAlphaL macro caracter
 endm
 ```
 ### Validación De Código Con Expresion Regular
+Valida que el código de producto cumpla con la expresión regular ```[0-9A-Z]```.
 ```js
 esCodigoValido macro campo
 	local calcular, evaluar, continuar, terminateV, terminateF, terminate
@@ -563,6 +565,7 @@ esCodigoValido macro campo
 endm
 ```
 ### Validación De Descripción Con Expresion Regular
+Valida que la descripción de producto cumpla con la expresión regular ```[0-9A-Za-z\s\.\,!]```.
 ```js
 esDescripcionValida macro campo
 	local calcular, evaluar, continuar, terminateV, terminateF, terminate
@@ -611,6 +614,7 @@ esDescripcionValida macro campo
 endm
 ```
 ### Validación De Número Con Expresion Regular
+Valida que el código de producto cumpla con la expresión regular ```[0-9]```.
 ```js
 esNumeroValido macro campo
 	local calcular, evaluar, continuar, terminateV, terminateF, terminate

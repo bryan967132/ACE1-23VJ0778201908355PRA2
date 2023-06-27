@@ -20,7 +20,6 @@
 	; BUFFER
 	buffer_entrada          db				21, 00
                             db				21 dup (0)
-	caracter				db				00
 	; REPORTE
 	html                    db				"<html><body>", "$"
 	html_f                  db				"</body></html>", "$"
