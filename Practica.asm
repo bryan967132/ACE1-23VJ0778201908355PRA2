@@ -34,6 +34,7 @@
 	fila_f                  db				"</tr>", 0a
 	columna                 db				"<td>"
 	columna_f               db				"</td>", 0a
+	letras                  db              "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz"
 	; PROMPT
 	prompt                  db				" Seleccione una Opcion", "$"
 	; FINALIZADO
@@ -88,6 +89,7 @@
 	tituloVenCod            db				" Codigo: ", "$"
 	tituloVenUni            db				" Unidades: ", "$"
 	tituloVendido           db				" Producto Vendido", "$"
+	prodAgotado             db				" Producto Agotado", "$"
 	c_FIN                   db				"fin"
 	; VALIDACIÓN
 	charInvalidos           db				" Caracteres Invalidos                               ", "$"
@@ -105,6 +107,17 @@
 	h_ventas                dw				0000
 	h_reportes              dw				0000
 	h_conf                  dw				0000
+	; FECHA Y HORA
+	dia                     db				?
+	mes                     db				?
+	anio                    dw              ?
+	hora                    db				?
+	min                     db				?
+	c_dia                   db              03 dup (0)
+	c_mes                   db              03 dup (0)
+	c_anio                  db              05 dup (0)
+	c_hora                  db              03 dup (0)
+	c_min                   db              03 dup (0)
 	; ESTRUCTURA PRODUCTO
 	p_codigo                db				05 dup (0)
 	p_descripcion           db				21 dup (0)
@@ -119,8 +132,6 @@
 	u_byte					db				01 dup (0)
 	; ESTRUCTURA VENTA
 	v_items                 db				02 dup (0)
-	v_codigo                db				05 dup (0)
-	v_unidades              db				03 dup (0)
 	n_items                 dw				0000
 	; LOGIN
 	loginFalla              db				"Credenciales Incorrectas", "$"
@@ -660,8 +671,14 @@ main:
 			mov [h_productos], AX
 		buscarProducto:
 			mov BX, [h_productos]
-			mov CX, 02a
+			mov CX, 26
 			mov DX, offset p_codigo_temp2
+			mov AH, 3f
+			int 21
+			;
+			mov BX, [h_productos]
+			mov CX, 04
+			mov DX, offset n_precio
 			mov AH, 3f
 			int 21
 			;
@@ -836,6 +853,21 @@ main:
 			mov AL, 00                ; ASIGNA AL = 00 PARA VALIDACIÓN FALSA
 		terminate:
 	endm
+	; ------------------------ OBTENER FECHA Y HORA DEL SISTEMA --------------------------
+	getDateTime macro
+		mov AH, 02a
+		int 21
+		mov dia, DL                   ; GUARDA DÍA = DL
+		mov mes, DH                   ; GUARDA MES = DH
+		mov anio, CX                  ; GUARDA ANIO = CX
+		mov AH, 02c
+		int 21
+		mov hora, CH                  ; GUARDA HORA = CH
+		mov min, CL                   ; GUARDA MIN = CL
+	endm
+	; ----------------------- IMPRIMIR FECHA Y HORA DEL SISTEMA --------------------------
+	printDateTime macro
+	endm
 ; ******************************************************************************************************************
 ; **************************************************** PROGRAMA ****************************************************
 ; ******************************************************************************************************************
@@ -855,6 +887,8 @@ main:
 		strcmp clave, clave_c, 09
 		cmp AL, 00
 		je terminateError
+		;getDateTime
+		;printDateTime
 	; ------------------------------------------------------------------------------------
 	; ------------------------------------ ENCABEZADO ------------------------------------
 	; ------------------------------------------------------------------------------------
@@ -912,6 +946,7 @@ main:
 				existeProducto p_codigo
 				cmp AL, 0ff
 				je yaExiste1
+				memset p_codigo, 05
 				jmp aceptaCodProd
 			charInvalidos1:
 				println charInvalidos
@@ -922,8 +957,8 @@ main:
 				memset p_codigo, 05
 				jmp codigoProd
 			aceptaCodProd:
+				print line
 			; ----------------------- DESCRIPCIÓN PRODUCTO -----------------------
-			print line
 			descripcionProd:
 				print tituloInsDes
 				leerEntrada buffer_entrada
@@ -945,8 +980,8 @@ main:
 				memset p_descripcion, 21
 				jmp descripcionProd
 			aceptaDesProd:
+				print line
 			; ------------------------- PRECIO PRODUCTO --------------------------
-			print line
 			precioProd:
 				print tituloInsPre
 				leerEntrada buffer_entrada
@@ -970,8 +1005,8 @@ main:
 			aceptaPreProd:
 				stoi n_precio, p_precio
 				memset p_precio, 03
+				print line
 			; ------------------------ UNIDADES PRODUCTO -------------------------
-			print line
 			unidadesProd:
 				print tituloInsUni
 				leerEntrada buffer_entrada
@@ -1003,9 +1038,9 @@ main:
 			memset p_descripcion, 21
 			; ----------------------- FIN INGRESO PRODUCTO -----------------------
 			print line
-			print line
 			limpiarArchivoProductos
 			println tituloInsertar_f
+			print line
 			print line
 			jmp menuProductos
 		; ****************************** VER PRODUCTO *******************************
@@ -1196,14 +1231,36 @@ main:
 					print line
 					jmp codVent
 				validarCodigo:
-					print line
 					; VALIDACIÓN DE CÓDIGO CON 'FIN'
-					memcpy v_codigo, buffer_entrada
-					strcmp v_codigo, c_FIN, 03
+					memcpy p_codigo, buffer_entrada
+					strcmp p_codigo, c_FIN, 03
 					cmp AL, 0ff
 					je finalizarVenta
+					; VALIDACIÓN DE FORMATO
+					esCodigoValido p_codigo
+					cmp AL, 00
+					je charInvalidos6
 					; VALIDACIÓN DE EXISTENCIA
-
+					existeProducto p_codigo
+					cmp n_unidades, 00
+					je prAgotado
+					cmp AL, 0ff
+					je aceptaCodVent
+					jmp noExiste2
+				charInvalidos6:
+					println charInvalidos
+					memset p_codigo, 05
+					jmp codVent
+				prAgotado:
+					println prodAgotado
+					memset p_codigo, 05
+					jmp codVent
+				noExiste2:
+					println noExisteCodigo
+					memset p_codigo, 05
+					jmp codVent
+				aceptaCodVent:
+					print line
 				; --------------------- UNIDADES DE PRODUCTO ---------------------
 				unitVent:
 					print tituloVenUni
@@ -1220,14 +1277,15 @@ main:
 					; VALIDACIÓN DE UNIDADES
 			; --------------------------------------------------------------------
 					println tituloVendido
-					memset v_codigo, 05
-					memset v_unidades, 03
+					memset p_codigo, 05
+					memset p_unidades, 03
 					dec [n_items]
 					cmp [n_items], 00
 					jne insertarProductoV
 			finalizarVenta:
 
 			println tituloVender_f
+			print line
 			jmp menuVentas
 	; ------------------------------------------------------------------------------------
 	; -------------------------------- MENÚ HERRAMIENTAS ---------------------------------
