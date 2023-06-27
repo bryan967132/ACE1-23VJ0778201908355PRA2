@@ -2,6 +2,8 @@
 .RADIX 16
 .STACK
 .DATA
+	; BORRADO (CEROS)
+	p_borrado               db				02a dup (0)
 	; CADENAS DE PRUEBA
 	prueba                  db				"LLEGA AQUI", "$"
 	; LÍNEAS
@@ -15,6 +17,10 @@
 	cornDR                  db				0bc, "$"
 	middleR                 db				0b9, "$"
 	lineL                   db				30 dup (0cd), "$"
+	; BUFFER
+	buffer_entrada          db				21, 00
+                            db				21 dup (0)
+	caracter				db				00
 	; REPORTE
 	html                    db				"<html><body>", "$"
 	html_f                  db				"</body></html>", "$"
@@ -28,9 +34,6 @@
 	prompt                  db				" Seleccione una Opcion", "$"
 	; FINALIZADO
 	finalizado              db				0ad, "Finalizado!", "$"
-	; BUFFER
-	buffer_entrada          db				21, 00
-                            db				21 dup (0)
 	; DATOS DE ENCABEZADO
 	universidad             db				0ba, " Universidad de San Carlos de Guatemala         ", 0ba, "$"
 	facultad                db				0ba, " Facultad de Ingenieria                         ", 0ba, "$"
@@ -62,23 +65,28 @@
 	tituloRepoAgotH         db				0ba, " 4. Reporte De Productos Agotados               ", 0ba, "$"
 	tituloVolverH           db				0ba, " 5. Volver                                      ", 0ba, "$"
 	; DATOS DE PRODUCTO
-	tituloInsertar          db				" ----------- Insertar Nuevo Producto ------------", "$"
-	tituloInsertar_f        db				" --------- Fin Insertar Nuevo Producto ----------", "$"
-	tituloVer               db				" -------------- Lista De Productos --------------", "$"
-	tituloVer_f             db				" ------------ Fin Lista De Productos ------------", "$"
-	tituloEliminar          db				" -------------- Eliminar Productos --------------", "$"
-	tituloEliminar_f        db				" ------------ Fin Eliminar Productos ------------", "$"
+	tituloInsertar          db				" ", 0b dup (0c4), " Insertar Nuevo Producto ",     0c dup (0c4), "$"
+	tituloInsertar_f        db				" ", 09 dup (0c4), " Fin Insertar Nuevo Producto ", 0a dup (0c4), "$"
+	tituloVer               db				" ", 0e dup (0c4), " Lista De Productos ",          0e dup (0c4), "$"
+	tituloVer_f             db				" ", 0c dup (0c4), " Fin Lista De Productos ",      0c dup (0c4), "$"
+	tituloEliminar          db				" ", 0e dup (0c4), " Eliminar Productos ",          0e dup (0c4), "$"
+	tituloEliminar_f        db				" ", 0c dup (0c4), " Fin Eliminar Productos ",      0c dup (0c4), "$"
 	tituloInsCod            db				" Codigo: ", "$"
 	tituloInsDes            db				" Descripcion: ", "$"
 	tituloInsPre            db				" Precio: ", "$"
 	tituloInsUni            db				" Unidades: ", "$"
+	yaExisteCodigo          db				" Ya Existe El Producto", "$"
+	noExisteCodigo          db				" No Existe El Producto", "$"
 	; DATOS DE VENTA
-	tituloVender            db				" ----------------- Nueva Venta ------------------", "$"
-	tituloVender_f          db				" --------------- Fin Nueva Venta ----------------", "$"
+	tituloVender            db				" ", 11 dup (0c4), " Nueva Venta ",     12 dup (0c4), "$"
+	tituloVender_f          db				" ", 0f dup (0c4), " Fin Nueva Venta ", 10 dup (0c4), "$"
 	tituloVenCan            db				" Cantidad de Productos (10 Maximo): ", "$"
 	tituloVenCod            db				" Codigo: ", "$"
 	tituloVenUni            db				" Unidades: ", "$"
 	tituloVendido           db				" Producto Vendido", "$"
+	c_FIN                   db				"fin"
+	; VALIDACIÓN
+	charInvalidos           db				" Caracteres Invalidos                               ", "$"
 	; ARCHIVOS
 	f_conf                  db				"PRAII.CON", 00
 	f_productos             db				"PROD.BIN", 00
@@ -104,16 +112,17 @@
 	n_unidades              dw				0000
 	c_numero                db				03 dup (30)
 	p_codigo_temp           db				05 dup (0)
+	p_codigo_temp2          db				05 dup (0)
 	puntero_temp            dw				0000
-	p_borrado               db				02a dup (0)
 	u_byte					db				01 dup (0)
 	; ESTRUCTURA VENTA
 	v_items                 db				02 dup (0)
 	v_codigo                db				05 dup (0)
-	v_unidades              db				05 dup (0)
+	v_unidades              db				03 dup (0)
 	n_items                 dw				0000
 	; LOGIN
-	loginFalla              db				"No Se Pudo Iniciar Sesion", "$"
+	loginFalla              db				"Credenciales Incorrectas", "$"
+	archivoConfError        db				"No Se Encontro Archivo De Configuracion", "$"
 	estado                  db				00
 	buffer_linea            db				0ff dup (0)
 	longitud_linea_leida    db				00
@@ -240,7 +249,7 @@ main:
 		mov AL, [DI]
 	endm
 	; ------------------------------ COMPARACIÓN DE CADENAS ------------------------------
-	compararCadenas macro cadena1, cadena2, tam
+	strcmp macro cadena1, cadena2, tam
 		local ciclo, diferentes, terminate
 			mov SI, offset cadena1
 			mov DI, offset cadena2
@@ -306,7 +315,7 @@ main:
         verificarTagCredenciales:
             mov CH, 00
             mov CL, [TOK_cred]
-            compararCadenas buffer_linea, TOK_cred, 0e  ; COMPARACION DE CADENAS: RESULTADO EN AL
+            strcmp buffer_linea, TOK_cred, 0e  ; COMPARACION DE CADENAS: RESULTADO EN AL
             cmp AL, 0ff
             je credsEncontrado
             mov DI, offset buffer_linea
@@ -322,13 +331,13 @@ main:
             ; VALIDACIÓN PARA PALABRA RESERVADA USUARIO
             mov CH, 00
             mov CL, [TOK_usuario]
-            compararCadenas buffer_linea, TOK_usuario, 07  ; COMPARACION DE CADENAS: RESULTADO EN AL
+            strcmp buffer_linea, TOK_usuario, 07  ; COMPARACION DE CADENAS: RESULTADO EN AL
             cmp AL, 0ff
             je usuarioEncontrado
             ; VALIDACIÓN PARA PALABRA RESERVADA CLAVE
             mov CH, 00
             mov CL, [TOK_clave]
-            compararCadenas buffer_linea, TOK_clave, 05  ; COMPARACION DE CADENAS: RESULTADO EN AL
+            strcmp buffer_linea, TOK_clave, 05  ; COMPARACION DE CADENAS: RESULTADO EN AL
             cmp AL, 0ff
             je claveEncontrado
             mov DI, offset buffer_linea
@@ -408,8 +417,8 @@ main:
 			mov AL, 0ff
         terminate:
     endm
-	; ---------------------- ACEPTAR CAMPO Y GUARDAR EN ESTRUCTURA -----------------------
-	aceptarCampoYGuardar macro campo, buffer
+	; -------------------------------------- MEMCPY --------------------------------------
+	memcpy macro campo, buffer
 		local aceptarCampo, copiarCampoAEstructura
 		aceptarCampo:
 			mov SI, offset campo
@@ -526,7 +535,7 @@ main:
 		int 21
 	endm
 	; --------------------------------- CADENA A NÚMERO ----------------------------------
-	parseNum macro numero, cadena
+	stoi macro numero, cadena
 		local convertir, terminate
 			mov DI, offset cadena
 			mov AX, 0000              ; INICIALIZAR LA SALIDA
@@ -546,7 +555,7 @@ main:
 			mov [numero], AX
 	endm
 	; --------------------------------- NÚMERO A CADENA ----------------------------------
-	parseCad macro cadena, numero
+	toString macro cadena, numero
 		local ciclo, cicloConvertir, aumentos, aumentarSiguiente, terminate
 			mov AX, [numero]
 			mov CX, 0005              ; INICIALIZAR CONTADOR
@@ -606,7 +615,7 @@ main:
 		obtenerCampo descripcion
 		print descripcion
 		print guion
-		parseCad c_numero, precio
+		toString c_numero, precio
 		mov BX, 0001
 		mov CX, 0005
 		mov DX, offset c_numero
@@ -641,6 +650,193 @@ main:
 			inc DI
 			loop ciclo
 	endm
+	; ----------------------- VALIDACION DE EXISTENCIA DE PRODUCTO -----------------------
+	existeProducto macro codigo
+		local buscarProducto, respuestaV, respuestaF, terminate
+			abrirArchivo f_productos
+			jc respuestaF
+			mov [h_productos], AX
+		buscarProducto:
+			mov BX, [h_productos]
+			mov CX, 02a
+			mov DX, offset p_codigo_temp2
+			mov AH, 3f
+			int 21
+			;
+			cmp AX, 00
+			je respuestaF    ; SI AX = 0 SALTA
+			; VALIDA SI EL PRODUCTO ES VÁLIDO
+			mov AL, 0000
+			cmp [codigo], AL
+			je buscarProducto
+			; VALIDA QUE EL CÓDIGO INGRESADO COINCIDA CON ALGUNO GUARDADO
+			strcmp p_codigo_temp2, codigo, 05 ; VALIDA COINCIDENCIA DE CADENAS, GUARDA RESULTADO EN DL
+			; AL = 0FF : VERDADERO ; DL = 00 : FALSO
+			cmp AL, 0ff           ; COMPARA AL
+			je respuestaV
+			jmp buscarProducto
+		respuestaV:
+			mov AL, 0ff
+			jmp terminate
+		respuestaF:
+			mov AL, 00
+		terminate:
+	endm
+	; ------------------------------------ ES DIGITO -------------------------------------
+	isDigit macro caracter
+		local terminateV, terminateF, terminate
+			cmp caracter, 30          ; COMPARA LA POSICION CON ASCII HEX DE 0 = 30
+			jb terminateF             ; SALTA A FALSO SI EL CARACTER EVALUADO ESTÁ ANTES DE 0 EN ASCII
+			cmp caracter, 39          ; COMPARA LA POSICION CON ASCII HEX DE 9 = 39
+			ja terminateF             ; SALTA A FALSO SI EL CARACTER EVALUADO ESTÁ DESPUÉS DE 9 EN ASCII
+		terminateV:
+			mov DL, 0ff               ; ASIGNA DL = 0FF PARA VALIDACIÓN VERDADERA
+			jmp terminate             ; SALTA A TERMINAR
+		terminateF:
+			mov DL, 00                ; ASIGNA DL = 00 PARA VALIDACIÓN FALSA
+		terminate:
+	endm
+	; -------------------------------- ES LETRA MAYÚSCULA --------------------------------
+	isAlphaU macro caracter
+		local terminateV, terminateF, terminate
+			cmp caracter, 41          ; COMPARA LA POSICION CON ASCII HEX DE A = 41
+			jb terminateF             ; SALTA A FALSO SI EL CARACTER EVALUADO ESTÁ ANTES DE A EN ASCII
+			cmp caracter, 05a         ; COMPARA LA POSICION CON ASCII HEX DE Z = 5A
+			ja terminateF             ; SALTA A FALSO SI EL CARACTER EVALUADO ESTÁ DESPUÉS DE Z EN ASCII
+		terminateV:
+			mov DL, 0ff               ; ASIGNA DL = 0FF PARA VALIDACIÓN VERDADERA
+			jmp terminate             ; SALTA A TERMINAR
+		terminateF:
+			mov DL, 00                ; ASIGNA DL = 00 PARA VALIDACIÓN FALSA
+		terminate:
+	endm
+	; -------------------------------- ES LETRA MINÚSCULA --------------------------------
+	isAlphaL macro caracter
+		local terminateV, terminateF, terminate
+			cmp caracter, 61          ; COMPARA LA POSICION CON ASCII HEX DE a = 61
+			jb terminateF             ; SALTA A FALSO SI EL CARACTER EVALUADO ESTÁ ANTES DE A EN ASCII
+			cmp caracter, 07a         ; COMPARA LA POSICION CON ASCII HEX DE z = 7A
+			ja terminateF             ; SALTA A FALSO SI EL CARACTER EVALUADO ESTÁ DESPUÉS DE Z EN ASCII
+		terminateV:
+			mov DL, 0ff               ; ASIGNA DL = 0FF PARA VALIDACIÓN VERDADERA
+			jmp terminate             ; SALTA A TERMINAR
+		terminateF:
+			mov DL, 00                ; ASIGNA DL = 00 PARA VALIDACIÓN FALSA
+		terminate:
+	endm
+	; -------------------- VALIDACIÓN DE EXPRESIÓN REGULAR DE CODIGO ---------------------
+	esCodigoValido macro campo
+		local calcular, evaluar, continuar, terminateV, terminateF, terminate
+			; CALCULO DE LONGITUD DE CARACTERES
+			mov DI, offset campo
+			mov CX, 00
+		calcular:
+			mov AL, [DI]
+			inc DI
+			inc CX
+			cmp AL, 00
+			jne calcular              ; FIN CALCULAR LONGITUD
+			dec CX
+			; POSICIONAR AL INICIO DEL CAMPO
+			mov DI, offset campo
+		evaluar:
+			mov AL, [DI]              ; 
+			mov [caracter], AL        ; CARACTER = AL
+			isDigit caracter          ; VALIDAR CARACTER COMO DÍGITO, RESULTADO EN DL
+			cmp DL, 0ff               ; COMPARA DL CON 0FF
+			je continuar              ; SALTA A CONTINUAR SI EL CARACTER ES DIGÍTO
+			isAlphaU AL               ; VALIDAR CARACTER COMO LETRA MAYÚSCULA, RESULTADO EN DL
+			cmp DL, 0ff               ; COMPARA DL CON 0FF
+			je continuar              ; SALTA A CONTINUAR SI EL CARACTER ES LETRA MAYÚSCULA
+			jmp terminateF            ; SALTA A FALSO SI EL CARACTER NO CUMPLE CON LAS VALIDACIONES ANTERIORES
+		continuar:
+			inc DI                    ; INCREMENTA POSICION
+			loop evaluar              ; REPITE CICLO
+		terminateV:
+			mov AL, 0ff               ; ASIGNA AL = 0FF PARA VALIDACIÓN VERDADERA
+			jmp terminate             ; SALTA A TERMINAR
+		terminateF:
+			mov AL, 00                ; ASIGNA AL = 00 PARA VALIDACIÓN FALSA
+		terminate:
+	endm
+	; ------------------ VALIDACIÓN DE EXPRESIÓN REGULAR DE DESCRIPCIÓN ------------------
+	esDescripcionValida macro campo
+		local calcular, evaluar, continuar, terminateV, terminateF, terminate
+			; CALCULO DE LONGITUD DE CARACTERES
+			mov DI, offset campo
+			mov CX, 00
+		calcular:
+			mov AL, [DI]
+			inc DI
+			inc CX
+			cmp AL, 00
+			jne calcular              ; FIN CALCULAR LONGITUD
+			dec CX
+			; POSICIONAR AL INICIO DEL CAMPO
+			mov DI, offset campo
+		evaluar:
+			mov AL, [DI]              ; 
+			mov [caracter], AL        ; CARACTER = AL
+			isDigit caracter          ; VALIDAR CARACTER COMO DÍGITO, RESULTADO EN DL
+			cmp DL, 0ff               ; COMPARA DL CON 0FF
+			je continuar              ; SALTA A CONTINUAR SI EL CARACTER ES DIGÍTO
+			isAlphaU AL               ; VALIDAR CARACTER COMO LETRA MAYÚSCULA, RESULTADO EN DL
+			cmp DL, 0ff               ; COMPARA DL CON 0FF
+			je continuar              ; SALTA A CONTINUAR SI EL CARACTER ES LETRA MAYÚSCULA
+			isAlphaL AL               ; VALIDAR CARACTER COMO LETRA MINÚSCULA, RESULTADO EN DL
+			cmp DL, 0ff               ; COMPARA DL CON 0FF
+			je continuar              ; SALTA A CONTINUAR SI EL CARACTER ES LETRA MINÚSCULA
+			cmp AL, 20                ; COMPARA AL (CARACTER) CON ESPACIO EN ASCII
+			je continuar              ; SALTA A CONTINUAR SI EL CARACTER ES ESPACIO
+			cmp AL, 21                ; COMPARA AL (CARACTER) CON EXCLAMACIÓN CERRADA EN ASCII
+			je continuar              ; SALTA A CONTINUAR SI EL CARACTER ES EXCLAMACIÓN CERRADA
+			cmp AL, 02c               ; COMPARA AL (CARACTER) CON COMA EN ASCII
+			je continuar              ; SALTA A CONTINUAR SI EL CARACTER ES COMA
+			cmp AL, 02e               ; COMPARA AL (CARACTER) CON PUNTO EN ASCII
+			je continuar              ; SALTA A CONTINUAR SI EL CARACTER ES PUNTO
+			jmp terminateF            ; SALTA A FALSO SI EL CARACTER NO CUMPLE CON LAS VALIDACIONES ANTERIORES
+		continuar:
+			inc DI                    ; INCREMENTA POSICION
+			loop evaluar              ; REPITE CICLO
+		terminateV:
+			mov AL, 0ff               ; ASIGNA AL = 0FF PARA VALIDACIÓN VERDADERA
+			jmp terminate             ; SALTA A TERMINAR
+		terminateF:
+			mov AL, 00                ; ASIGNA AL = 00 PARA VALIDACIÓN FALSA
+		terminate:
+	endm
+	; -------------------- VALIDACIÓN DE EXPRESIÓN REGULAR DE NÚMERO ---------------------
+	esNumeroValido macro campo
+		local calcular, evaluar, continuar, terminateV, terminateF, terminate
+			; CALCULO DE LONGITUD DE CARACTERES
+			mov DI, offset campo
+			mov CX, 00
+		calcular:
+			mov AL, [DI]
+			inc DI
+			inc CX
+			cmp AL, 00
+			jne calcular              ; FIN CALCULAR LONGITUD
+			dec CX
+			; POSICIONAR AL INICIO DEL CAMPO
+			mov DI, offset campo
+		evaluar:
+			mov AL, [DI]              ; 
+			mov [caracter], AL        ; CARACTER = AL
+			isDigit caracter          ; VALIDAR CARACTER COMO DÍGITO, RESULTADO EN DL
+			cmp DL, 0ff               ; COMPARA DL CON 0FF
+			je continuar              ; SALTA A CONTINUAR SI EL CARACTER ES DIGÍTO
+			jmp terminateF            ; SALTA A FALSO SI EL CARACTER NO CUMPLE CON LAS VALIDACIONES ANTERIORES
+		continuar:
+			inc DI                    ; INCREMENTA POSICION
+			loop evaluar              ; REPITE CICLO
+		terminateV:
+			mov AL, 0ff               ; ASIGNA AL = 0FF PARA VALIDACIÓN VERDADERA
+			jmp terminate             ; SALTA A TERMINAR
+		terminateF:
+			mov AL, 00                ; ASIGNA AL = 00 PARA VALIDACIÓN FALSA
+		terminate:
+	endm
 ; ******************************************************************************************************************
 ; **************************************************** PROGRAMA ****************************************************
 ; ******************************************************************************************************************
@@ -651,13 +847,13 @@ main:
 		; PARSEO DEL ARCHIVO DE CONFIGURACION
 		parseoConfig
 		cmp AL, 00
-		je terminateError
+		je confError
 		; VALIDACION DE USUARIO
-		compararCadenas usuario, usuario_c, 08
+		strcmp usuario, usuario_c, 08
 		cmp AL, 00
 		je terminateError
 		; VALIDACION DE CLAVE
-		compararCadenas clave, clave_c, 09
+		strcmp clave, clave_c, 09
 		cmp AL, 00
 		je terminateError
 	; ------------------------------------------------------------------------------------
@@ -706,11 +902,27 @@ main:
 				cmp AL, 00               ; COMPARA AL Y 00H
 				je codigoProd            ; SALTA SI AL = 00H
 				cmp AL, 05               ; COMPARA AL Y 05H
-				jb aceptaCodProd         ; SALTA SI AL < 05H
+				jb validarCodigoP        ; SALTA SI AL < 05H
 				print line
 				jmp codigoProd
+			validarCodigoP:
+				memcpy p_codigo, buffer_entrada
+				esCodigoValido p_codigo ; EVALUA CARACTERES VÁLIDOS PARA CÓDIGO: [0-9A-Z]
+				cmp AL, 00
+				je charInvalidos1
+				existeProducto p_codigo
+				cmp AL, 0ff
+				je yaExiste1
+				jmp aceptaCodProd
+			charInvalidos1:
+				println charInvalidos
+				memset p_codigo, 05
+				jmp codigoProd
+			yaExiste1:
+				println yaExisteCodigo
+				memset p_codigo, 05
+				jmp codigoProd
 			aceptaCodProd:
-				aceptarCampoYGuardar p_codigo, buffer_entrada
 			; ----------------------- DESCRIPCIÓN PRODUCTO -----------------------
 			print line
 			descripcionProd:
@@ -720,11 +932,20 @@ main:
 				cmp AL, 00               ; COMPARA AL Y 00H
 				je descripcionProd       ; SALTA SI AL = 00H
 				cmp AL, 21               ; COMPARA AL Y 21H
-				jb aceptaDesProd         ; SALTA SI AL < 21H
+				jb validarDescripcionP   ; SALTA SI AL < 21H
 				print line
 				jmp descripcionProd
+			validarDescripcionP:
+				memcpy p_descripcion, buffer_entrada
+				esDescripcionValida p_descripcion ; EVALUA CARACTERES VÁLIDOS PARA DESCRIPCION: [0-9A-Za-z\s\,\.!]
+				cmp AL, 00
+				je charInvalidos2
+				jmp aceptaDesProd
+			charInvalidos2:
+				println charInvalidos
+				memset p_descripcion, 21
+				jmp descripcionProd
 			aceptaDesProd:
-				aceptarCampoYGuardar p_descripcion, buffer_entrada
 			; ------------------------- PRECIO PRODUCTO --------------------------
 			print line
 			precioProd:
@@ -734,14 +955,22 @@ main:
 				cmp AL, 00               ; COMPARA AL Y 00H
 				je precioProd            ; SALTA SI AL = 00H
 				cmp AL, 03               ; COMPARA AL Y 03H
-				jb aceptaPreProd         ; SALTA SI AL < 03H
+				jb validarPrecioP        ; SALTA SI AL < 03H
 				print line
 				jmp precioProd
-			aceptaPreProd:
-				aceptarCampoYGuardar p_precio, buffer_entrada
-				parseNum n_precio, p_precio
+			validarPrecioP:
+				memcpy p_precio, buffer_entrada
+				esNumeroValido p_precio  ; EVALUA CARACTERES VÁLIDOS PARA CÓDIGO: [0-9]
+				cmp AL, 00
+				je charInvalidos3
+				jmp aceptaPreProd
+			charInvalidos3:
+				println charInvalidos
 				memset p_precio, 03
-				; parseNum n_precio, p_precio
+				jmp precioProd
+			aceptaPreProd:
+				stoi n_precio, p_precio
+				memset p_precio, 03
 			; ------------------------ UNIDADES PRODUCTO -------------------------
 			print line
 			unidadesProd:
@@ -751,14 +980,23 @@ main:
 				cmp AL, 00               ; COMPARA AL Y 00H
 				je unidadesProd          ; SALTA SI AL = 00H
 				cmp AL, 03               ; COMPARA AL Y 03H
-				jb aceptaUniProd         ; SALTA SI AL < 03H
+				jb validarUniProd        ; SALTA SI AL < 03H
 				print line
 				jmp unidadesProd
-			aceptaUniProd:
-				aceptarCampoYGuardar p_unidades, buffer_entrada
-				parseNum n_unidades, p_unidades
+			validarUniProd:
+				memcpy p_unidades, buffer_entrada
+				esNumeroValido p_unidades ; EVALUA CARACTERES VÁLIDOS PARA CÓDIGO: [0-9]
+				cmp AL, 00
+				je charInvalidos4
+				jmp aceptaUniProd
+			charInvalidos4:
+				println charInvalidos
 				memset p_unidades, 03
-				; parseNum n_unidades, p_unidades
+				jmp unidadesProd
+			aceptaUniProd:
+				stoi n_unidades, p_unidades
+				memset p_unidades, 03
+				; stoi n_unidades, p_unidades
 			; --------------------- MANEJO ARCHIVO PRODUCTO ----------------------
 			abrirArchivoM f_productos     ; ABRIR ARCHIVO SI EXISTE, SI NO EXISTE LO CREA Y ABRE
 			escribirAlFinalArchivoProducto h_productos, p_codigo, n_precio
@@ -770,6 +1008,7 @@ main:
 			print line
 			limpiarArchivoProductos
 			println tituloInsertar_f
+			print line
 			jmp menuProductos
 		; ****************************** VER PRODUCTO *******************************
 		verProductos:
@@ -813,12 +1052,11 @@ main:
 				jmp cicloVer
 			finVer:
 				println tituloVer_f
+				print line
 				jmp menuProductos
 		; **************************** ELIMINAR PRODUCTO ****************************
 		eliminarProducto:
 				println tituloEliminar
-				mov DX, 0000
-				mov [puntero_temp], DX
 			; ------------------------- CODIGO PRODUCTO --------------------------
 			codigoProdEl:
 				print tituloInsCod
@@ -827,11 +1065,30 @@ main:
 				cmp AL, 00               ; COMPARA AL Y 00H
 				je codigoProdEl          ; SALTA SI AL = 00H
 				cmp AL, 05               ; COMPARA AL Y 05H
-				jb aceptaCodProdEl       ; SALTA SI AL < 05H
+				jb validarCodigoPEl      ; SALTA SI AL < 05H
 				print line
 				jmp codigoProdEl
+			validarCodigoPEl:
+				memcpy p_codigo_temp, buffer_entrada
+				esCodigoValido p_codigo_temp ; EVALUA CARACTERES VÁLIDOS PARA CÓDIGO: [0-9A-Z]
+				cmp AL, 00
+				je charInvalidos5
+				existeProducto p_codigo_temp
+				cmp AL, 00
+				je noExiste1
+				jmp aceptaCodProdEl
+			charInvalidos5:
+				println charInvalidos
+				memset p_codigo_temp, 05
+				jmp codigoProdEl
+			noExiste1:
+				print line
+				println noExisteCodigo
+				memset p_codigo_temp, 05
+				jmp finalizarB
 			aceptaCodProdEl:
-				aceptarCampoYGuardar p_codigo_temp, buffer_entrada
+				mov DX, 0000
+				mov [puntero_temp], DX
 				abrirArchivo f_productos
 				jc finalizarB
 				mov [h_productos], AX
@@ -858,7 +1115,7 @@ main:
 				cmp [p_codigo], AL
 				je buscarProductoEl
 				; VALIDA QUE EL CÓDIGO INGRESADO COINCIDA CON ALGUNO GUARDADO
-				compararCadenas p_codigo_temp, p_codigo, 05 ; VALIDA COINCIDENCIA DE CADENAS, GUARDA RESULTADO EN DL
+				strcmp p_codigo_temp, p_codigo, 05 ; VALIDA COINCIDENCIA DE CADENAS, GUARDA RESULTADO EN DL
 				; AL = 0FF : VERDADERO ; DL = 00 : FALSO
 				cmp AL, 0ff           ; COMPARA DL
 				je borrarEncontradoP
@@ -900,45 +1157,76 @@ main:
 			println tituloVender
 			; ------------------------ CANTIDAD DE ITEMS -------------------------
 			cantVent:
-					print tituloVenCan
-					leerEntrada buffer_entrada
-					lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
-					cmp AL, 00               ; COMPARA AL Y 00H
-					je cantVent              ; SALTA SI AL = 00H
-					cmp AL, 03               ; COMPARA AL Y 05H
-					jb validarItems          ; SALTA SI AL < 05H
-					print line
-					jmp cantVent
-				validarItems:
-					aceptarCampoYGuardar v_items, buffer_entrada
-					parseNum n_items, v_items
-					cmp n_items, 00
-					je noItems
-					cmp n_items, 0b
-					jb iniciarVenta
-					print line
-					memset v_items, 03
-					jmp cantVent
-				noItems:
-					print line
-					memset v_items, 03
-					jmp cantVent
+				print tituloVenCan
+				leerEntrada buffer_entrada
+				lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
+				cmp AL, 00               ; COMPARA AL Y 00H
+				je cantVent              ; SALTA SI AL = 00H
+				cmp AL, 03               ; COMPARA AL Y 05H
+				jb validarItems          ; SALTA SI AL < 05H
+				print line
+				jmp cantVent
+			validarItems:
+				memcpy v_items, buffer_entrada
+				stoi n_items, v_items
+				cmp n_items, 00
+				je noItems
+				cmp n_items, 0b
+				jb iniciarVenta
+				print line
+				memset v_items, 03
+				jmp cantVent
+			noItems:
+				print line
+				memset v_items, 03
+				jmp cantVent
 			; --------------------- PRODUCTOS PARA LA VENTA ----------------------
 			iniciarVenta:
 				print line
-				mov SI, 00
 			insertarProductoV:
+				; ---------------------- CODIGO DE PRODUCTO ----------------------
 				codVent:
 					print tituloVenCod
 					leerEntrada buffer_entrada
+					lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
+					cmp AL, 00               ; COMPARA AL Y 00H
+					je codVent               ; SALTA SI AL = 00H
+					cmp AL, 05               ; COMPARA AL Y 05H
+					jb validarCodigo         ; SALTA SI AL < 05H
 					print line
+					jmp codVent
+				validarCodigo:
+					print line
+					; VALIDACIÓN DE CÓDIGO CON 'FIN'
+					memcpy v_codigo, buffer_entrada
+					strcmp v_codigo, c_FIN, 03
+					cmp AL, 0ff
+					je finalizarVenta
+					; VALIDACIÓN DE EXISTENCIA
+
+				; --------------------- UNIDADES DE PRODUCTO ---------------------
+				unitVent:
 					print tituloVenUni
 					leerEntrada buffer_entrada
+					lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
+					cmp AL, 00               ; COMPARA AL Y 00H
+					je unitVent              ; SALTA SI AL = 00H
+					cmp AL, 03               ; COMPARA AL Y 05H
+					jb validarUnidades       ; SALTA SI AL < 05H
 					print line
+					jmp unitVent
+				validarUnidades:
+					print line
+					; VALIDACIÓN DE UNIDADES
+			; --------------------------------------------------------------------
 					println tituloVendido
-					inc SI
-					cmp SI, [n_items]
-					jb codVent
+					memset v_codigo, 05
+					memset v_unidades, 03
+					dec [n_items]
+					cmp [n_items], 00
+					jne insertarProductoV
+			finalizarVenta:
+
 			println tituloVender_f
 			jmp menuVentas
 	; ------------------------------------------------------------------------------------
@@ -954,6 +1242,9 @@ main:
 		cmp AL, 35 ; OPCION 5: VOLVER
 		je menuPrincipal
 		jmp menuHerramientas
+confError:
+	println archivoConfError
+	jmp terminate
 terminateError:
 	println loginFalla
 terminate:
