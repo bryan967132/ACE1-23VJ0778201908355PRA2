@@ -103,10 +103,7 @@
 	; HANDLES
 	h_productos             dw				0000
 	h_ventas                dw				0000
-	h_repcatalogo           dw				0000
-	h_repalfabetico         dw				0000
-	h_repventas             dw				0000
-	h_repfalta              dw				0000
+	h_reportes              dw				0000
 	h_conf                  dw				0000
 	; ESTRUCTURA PRODUCTO
 	p_codigo                db				05 dup (0)
@@ -1243,22 +1240,24 @@ main:
 		cmp AL, 32 ; OPCION 2: REPORTE ALFABÉTICO  HTM
 		cmp AL, 33 ; OPCION 3: REPORTE DE VENTAS   TXT
 		cmp AL, 34 ; OPCION 4: REPORTE DE AGOTADOS HTM
+		je agotadosExport
 		cmp AL, 35 ; OPCION 5: VOLVER
 		je menuPrincipal
 		jmp menuHerramientas
+	; --------------------------------- CATÁLOGO ---------------------------------
 	catalogoExport:
 		mov AH, 3c
 		mov CX, 00
 		mov DX, offset f_repcatalogo
 		int 21
-		mov [h_repcatalogo], AX
+		mov [h_reportes], AX
 		mov BX, AX
 		mov AH, 40
 		mov CH, 00
 		mov CL, [longitud_header_html]
 		mov DX, offset html
 		int 21
-		mov BX, [h_repcatalogo]
+		mov BX, [h_reportes]
 		mov AH, 40
 		mov CH, 00
 		mov CL, [longitud_init_tabla]
@@ -1294,14 +1293,89 @@ main:
 		call imprimir_estructura_html
 		jmp cicloMostrarRep1
 	finCicloMostrarRep1:
-		mov BX, [h_repcatalogo]
+		mov BX, [h_reportes]
 		mov AH, 40
 		mov CH, 00
 		mov CL, [longitud_close_tabla]
 		mov DX, offset tabla_f
 		int 21
 		;
-		mov BX, [h_repcatalogo]
+		mov BX, [h_reportes]
+		mov AH, 40
+		mov CH, 00
+		mov CL, [longitud_close_html]
+		mov DX, offset html_f
+		int 21
+		;
+		cerrarArchivo
+		println generado
+		print line
+		jmp menuHerramientas
+	; ----------------------------- SIN EXISTENCIAS ------------------------------
+	agotadosExport:
+		mov AH, 3c
+		mov CX, 00
+		mov DX, offset f_repfalta
+		int 21
+		mov [h_reportes], AX
+		mov BX, AX
+		mov AH, 40
+		mov CH, 00
+		mov CL, [longitud_header_html]
+		mov DX, offset html
+		int 21
+		mov BX, [h_reportes]
+		mov AH, 40
+		mov CH, 00
+		mov CL, [longitud_init_tabla]
+		mov DX, offset tabla
+		int 21
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		abrirArchivo f_productos
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		mov [h_productos], AX
+	; LEER
+	cicloMostrarRep4:
+		; PUNTERO EN CIERTA POSICIÓN
+		mov BX, [h_productos]
+		mov CX, 26
+		mov DX, offset p_codigo
+		mov AH, 3f
+		int 21
+		; AVANZÓ EL PUNTERO
+		mov BX, [h_productos]
+		mov CX, 02
+		mov DX, offset n_precio
+		mov AH, 3f
+		int 21
+		; AVANZÓ EL PUNTERO
+		mov BX, [h_productos]
+		mov CX, 02
+		mov DX, offset n_unidades
+		mov AH, 3f
+		int 21
+		; BYTES LEIDOS
+		; SI SE LEYERON 0 BYTES SE ENCONTRÓ EOF
+		cmp AX, 00
+		je finCicloMostrarRep1
+		; VERIFICAR VALIDEZ DEL PRODUCTO
+		mov AL, 00
+		cmp [p_codigo], AL
+		je cicloMostrarRep4
+		;
+		cmp [n_unidades], 00
+		jne cicloMostrarRep4
+		call imprimir_estructura_html
+		jmp cicloMostrarRep4
+	finCicloMostrarRep4:
+		mov BX, [h_reportes]
+		mov AH, 40
+		mov CH, 00
+		mov CL, [longitud_close_tabla]
+		mov DX, offset tabla_f
+		int 21
+		;
+		mov BX, [h_reportes]
 		mov AH, 40
 		mov CH, 00
 		mov CL, [longitud_close_html]
@@ -1315,14 +1389,14 @@ main:
 ;;; ENTRADA:
 ;;    BX -> handle
 imprimir_estructura_html:
-	mov BX, [h_repcatalogo]
+	mov BX, [h_reportes]
 	mov AH, 40
 	mov CH, 00
 	mov CL, 05
 	mov DX, offset fila
 	int 21
 	;;
-	mov BX, [h_repcatalogo]
+	mov BX, [h_reportes]
 	mov AH, 40
 	mov CH, 00
 	mov CL, 04
@@ -1339,7 +1413,7 @@ ciclo_escribir_codigo:
 	cmp SI, 0006
 	je escribir_desc
 	mov CX, 0001
-	mov BX, [h_repcatalogo]
+	mov BX, [h_reportes]
 	mov AH, 40
 	int 21
 	inc DX
@@ -1347,14 +1421,14 @@ ciclo_escribir_codigo:
 	jmp ciclo_escribir_codigo
 escribir_desc:
 	;;
-	mov BX, [h_repcatalogo]
+	mov BX, [h_reportes]
 	mov AH, 40
 	mov CH, 00
 	mov CL, 06
 	mov DX, offset columna_f
 	int 21
 	;;
-	mov BX, [h_repcatalogo]
+	mov BX, [h_reportes]
 	mov AH, 40
 	mov CH, 00
 	mov CL, 04
@@ -1371,7 +1445,7 @@ ciclo_escribir_desc:
 	cmp SI, 0026
 	je cerrar_tags
 	mov CX, 0001
-	mov BX, [h_repcatalogo]
+	mov BX, [h_reportes]
 	mov AH, 40
 	int 21
 	inc DX
@@ -1379,14 +1453,14 @@ ciclo_escribir_desc:
 	jmp ciclo_escribir_desc
 	;;
 cerrar_tags:
-	mov BX, [h_repcatalogo]
+	mov BX, [h_reportes]
 	mov AH, 40
 	mov CH, 00
 	mov CL, 06
 	mov DX, offset columna_f
 	int 21
 	;;
-	mov BX, [h_repcatalogo]
+	mov BX, [h_reportes]
 	mov AH, 40
 	mov CH, 00
 	mov CL, 06
