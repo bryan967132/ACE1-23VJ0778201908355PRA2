@@ -21,14 +21,19 @@
 	buffer_entrada          db				21, 00
                             db				21 dup (0)
 	; REPORTE
-	html                    db				"<html><body>", "$"
-	html_f                  db				"</body></html>", "$"
-	tabla                   db				"<table>", "$"
-	tabla_f                 db				"</table>", "$"
-	fila                    db				"<tr>", "$"
-	fila_f                  db				"</tr>", "$"
-	columna                 db				"<td>", "$"
-	columna_f               db				"</td>", "$"
+	longitud_header_html    db				0a9
+	longitud_close_html     db				0e
+	longitud_init_tabla     db				38
+	longitud_close_tabla    db				09
+	html                    db				"<html><body>", 0a
+	style                   db              "<style>table {border: 1px;border-color: rgb(0, 0, 0);}th {background-color: rgb(0, 200, 123);color: white;padding: 7px 10px;}td {padding: 7px 10px;}</style>"
+	html_f                  db				"</body></html>"
+	tabla                   db				"<table>", 0a, "<tr>", 0a, "<th>Codigo</th>", 0a, "<th>Descripcion</th>", 0a, "</tr>", 0a
+	tabla_f                 db				"</table>", 0a
+	fila                    db				"<tr>", 0a
+	fila_f                  db				"</tr>", 0a
+	columna                 db				"<td>"
+	columna_f               db				"</td>", 0a
 	; PROMPT
 	prompt                  db				" Seleccione una Opcion", "$"
 	; FINALIZADO
@@ -94,6 +99,7 @@
 	f_repalfabetico         db				"ABC.HTM", 00
 	f_repventas             db				"REP.TXT", 00
 	f_repfalta              db				"FALTA.HTM", 00
+	generado                db				" Reporte Generado                              ", "$"
 	; HANDLES
 	h_productos             dw				0000
 	h_ventas                dw				0000
@@ -1233,12 +1239,161 @@ main:
 		imprimirMenuHerramientas
 		leerCaracter
 		cmp AL, 31 ; OPCION 1: GENERAR CATÁLOGO    HTM
+		je catalogoExport
 		cmp AL, 32 ; OPCION 2: REPORTE ALFABÉTICO  HTM
 		cmp AL, 33 ; OPCION 3: REPORTE DE VENTAS   TXT
 		cmp AL, 34 ; OPCION 4: REPORTE DE AGOTADOS HTM
 		cmp AL, 35 ; OPCION 5: VOLVER
 		je menuPrincipal
 		jmp menuHerramientas
+	catalogoExport:
+		mov AH, 3c
+		mov CX, 00
+		mov DX, offset f_repcatalogo
+		int 21
+		mov [h_repcatalogo], AX
+		mov BX, AX
+		mov AH, 40
+		mov CH, 00
+		mov CL, [longitud_header_html]
+		mov DX, offset html
+		int 21
+		mov BX, [h_repcatalogo]
+		mov AH, 40
+		mov CH, 00
+		mov CL, [longitud_init_tabla]
+		mov DX, offset tabla
+		int 21
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		abrirArchivo f_productos
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		mov [h_productos], AX
+	; LEER
+	cicloMostrarRep1:
+		; PUNTERO EN CIERTA POSICIÓN
+		mov BX, [h_productos]
+		mov CX, 26
+		mov DX, offset p_codigo
+		mov AH, 3f
+		int 21
+		; AVANZÓ EL PUNTERO
+		mov BX, [h_productos]
+		mov CX, 04
+		mov DX, offset n_precio
+		mov AH, 3f
+		int 21
+		; BYTES LEIDOS
+		; SI SE LEYERON 0 BYTES SE ENCONTRÓ EOF
+		cmp AX, 00
+		je finCicloMostrarRep1
+		; VERIFICAR VALIDEZ DEL PRODUCTO
+		mov AL, 00
+		cmp [p_codigo], AL
+		je cicloMostrarRep1
+		;
+		call imprimir_estructura_html
+		jmp cicloMostrarRep1
+	finCicloMostrarRep1:
+		mov BX, [h_repcatalogo]
+		mov AH, 40
+		mov CH, 00
+		mov CL, [longitud_close_tabla]
+		mov DX, offset tabla_f
+		int 21
+		;
+		mov BX, [h_repcatalogo]
+		mov AH, 40
+		mov CH, 00
+		mov CL, [longitud_close_html]
+		mov DX, offset html_f
+		int 21
+		;
+		cerrarArchivo
+		println generado
+		print line
+		jmp menuHerramientas
+;;; ENTRADA:
+;;    BX -> handle
+imprimir_estructura_html:
+	mov BX, [h_repcatalogo]
+	mov AH, 40
+	mov CH, 00
+	mov CL, 05
+	mov DX, offset fila
+	int 21
+	;;
+	mov BX, [h_repcatalogo]
+	mov AH, 40
+	mov CH, 00
+	mov CL, 04
+	mov DX, offset columna
+	int 21
+	;;
+	mov DX, offset p_codigo
+	mov SI, 0000
+ciclo_escribir_codigo:
+	mov DI, DX
+	mov AL, [DI]
+	cmp AL, 00
+	je escribir_desc
+	cmp SI, 0006
+	je escribir_desc
+	mov CX, 0001
+	mov BX, [h_repcatalogo]
+	mov AH, 40
+	int 21
+	inc DX
+	inc SI
+	jmp ciclo_escribir_codigo
+escribir_desc:
+	;;
+	mov BX, [h_repcatalogo]
+	mov AH, 40
+	mov CH, 00
+	mov CL, 06
+	mov DX, offset columna_f
+	int 21
+	;;
+	mov BX, [h_repcatalogo]
+	mov AH, 40
+	mov CH, 00
+	mov CL, 04
+	mov DX, offset columna
+	int 21
+	;;
+	mov DX, offset p_descripcion
+	mov SI, 0000
+ciclo_escribir_desc:
+	mov DI, DX
+	mov AL, [DI]
+	cmp AL, 00
+	je cerrar_tags
+	cmp SI, 0026
+	je cerrar_tags
+	mov CX, 0001
+	mov BX, [h_repcatalogo]
+	mov AH, 40
+	int 21
+	inc DX
+	inc SI
+	jmp ciclo_escribir_desc
+	;;
+cerrar_tags:
+	mov BX, [h_repcatalogo]
+	mov AH, 40
+	mov CH, 00
+	mov CL, 06
+	mov DX, offset columna_f
+	int 21
+	;;
+	mov BX, [h_repcatalogo]
+	mov AH, 40
+	mov CH, 00
+	mov CL, 06
+	mov DX, offset fila_f
+	int 21
+	;;
+	ret
 confError:
 	println archivoConfError
 	jmp terminate
