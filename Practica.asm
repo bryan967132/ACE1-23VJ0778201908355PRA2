@@ -2,6 +2,9 @@
 .RADIX 16
 .STACK
 .DATA
+	; ESTRUCTURA VENTA
+	v_items                 db				02 dup (0)
+	n_items                 dw				0000
 	; BORRADO (CEROS)
 	p_borrado               db				02a dup (0)
 	; CADENAS DE PRUEBA
@@ -130,9 +133,6 @@
 	p_codigo_temp2          db				05 dup (0)
 	puntero_temp            dw				0000
 	u_byte					db				01 dup (0)
-	; ESTRUCTURA VENTA
-	v_items                 db				02 dup (0)
-	n_items                 dw				0000
 	; LOGIN
 	loginFalla              db				"Credenciales Incorrectas", "$"
 	archivoConfError        db				"No Se Encontro Archivo De Configuracion", "$"
@@ -946,7 +946,6 @@ main:
 				existeProducto p_codigo
 				cmp AL, 0ff
 				je yaExiste1
-				memset p_codigo, 05
 				jmp aceptaCodProd
 			charInvalidos1:
 				println charInvalidos
@@ -1189,37 +1188,11 @@ main:
 		jmp menuVentas
 		; *************************** VENTA DE PRODUCTOS ****************************
 		realizarVenta:
-			println tituloVender
-			; ------------------------ CANTIDAD DE ITEMS -------------------------
-			cantVent:
-				print tituloVenCan
-				leerEntrada buffer_entrada
-				lenCadena buffer_entrada ; LONGITUD DE CADENA EN AL
-				cmp AL, 00               ; COMPARA AL Y 00H
-				je cantVent              ; SALTA SI AL = 00H
-				cmp AL, 03               ; COMPARA AL Y 05H
-				jb validarItems          ; SALTA SI AL < 05H
-				print line
-				jmp cantVent
-			validarItems:
-				memcpy v_items, buffer_entrada
-				stoi n_items, v_items
-				cmp n_items, 00
-				je noItems
-				cmp n_items, 0b
-				jb iniciarVenta
-				print line
-				memset v_items, 03
-				jmp cantVent
-			noItems:
-				print line
-				memset v_items, 03
-				jmp cantVent
+				println tituloVender
 			; --------------------- PRODUCTOS PARA LA VENTA ----------------------
-			iniciarVenta:
-				print line
 			insertarProductoV:
 				; ---------------------- CODIGO DE PRODUCTO ----------------------
+				mov n_items, 00
 				codVent:
 					print tituloVenCod
 					leerEntrada buffer_entrada
@@ -1279,11 +1252,10 @@ main:
 					println tituloVendido
 					memset p_codigo, 05
 					memset p_unidades, 03
-					dec [n_items]
-					cmp [n_items], 00
+					inc [n_items]
+					cmp [n_items], 0a
 					jne insertarProductoV
 			finalizarVenta:
-
 			println tituloVender_f
 			print line
 			jmp menuVentas
